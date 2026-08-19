@@ -1,0 +1,22 @@
+# Your camera details and passwords - never commit
+cameras.yaml
+
+# Generated from cameras.yaml, contains credentials
+go2rtc/go2rtc.yaml
+
+# go2rtc binary - downloaded by scripts/setup.ps1
+go2rtc/go2rtc.exe
+go2rtc/go2rtc
+go2rtc/*.log
+
+node_modules/
+npm-debug.log*
+
+# Electron user data if relocated into the project
+userdata/
+
+*.log
+*.bak
+*.bak-*
+.DS_Store
+Thumbs.db

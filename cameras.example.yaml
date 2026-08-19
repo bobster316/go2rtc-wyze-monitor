@@ -1,0 +1,59 @@
+# Copy this file to cameras.yaml and fill in your own values.
+# cameras.yaml is gitignored - it holds your camera passwords.
+#
+#   copy cameras.example.yaml cameras.yaml
+#
+# Enable RTSP on each camera first (Wyze app -> camera -> Settings -> Advanced
+# Settings -> RTSP). You choose the username and password there, per camera.
+
+# Path to ffmpeg. "ffmpeg" works if it is on your PATH; otherwise give the full
+# path, e.g. C:/ffmpeg/bin/ffmpeg.exe   (use forward slashes on Windows)
+ffmpeg: ffmpeg
+
+# Grid quality on startup: "main" (full resolution) or "sub" (low resolution).
+defaultQuality: main
+
+cameras:
+  # id       lowercase, no spaces - used internally for stream names
+  # name     shown on the tile
+  # ip       camera's LAN address (give it a DHCP reservation on your router)
+  # user     RTSP username you set in the Wyze app
+  # password RTSP password you set in the Wyze app
+  #
+  # Tiles fill the grid in the order listed here.
+  - id: front
+    name: Front
+    ip: 192.168.1.10
+    user: Front
+    password: CHANGE_ME
+
+  - id: front_garden
+    name: Front Garden
+    ip: 192.168.1.11
+    user: Front_Garden
+    password: CHANGE_ME
+
+  - id: back_garden
+    name: Back Garden
+    ip: 192.168.1.12
+    user: Back_Garden
+    password: CHANGE_ME
+
+  - id: office
+    name: Office
+    ip: 192.168.1.13
+    user: Office
+    password: CHANGE_ME
+
+# Advanced -----------------------------------------------------------------
+# Stream paths on the camera. Wyze Cam v4 firmware exposes stream0 (full
+# resolution) and stream1 (low resolution). Leave these alone unless your
+# firmware differs.
+streams:
+  main: stream0
+  sub: stream1
+
+# RTSPS port. Wyze uses 322 for TLS. If you enabled insecure RTSP instead,
+# set this to 554 and tls: false.
+port: 322
+tls: true

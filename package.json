@@ -1,0 +1,28 @@
+{
+  "name": "go2rtc-wyze-monitor",
+  "version": "1.0.0",
+  "description": "Low-CPU multi-camera dashboard for Wyze Cam v4 over local RTSPS, using go2rtc for H.264 passthrough to WebRTC",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "config": "node scripts/generate-go2rtc-config.js",
+    "setup": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1"
+  },
+  "keywords": [
+    "wyze",
+    "go2rtc",
+    "rtsp",
+    "rtsps",
+    "webrtc",
+    "electron",
+    "nvr",
+    "camera"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  }
+}

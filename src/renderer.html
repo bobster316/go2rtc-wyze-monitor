@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wyze Monitor</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">W</div>
+      <div>
+        <h1>Wyze Monitor</h1>
+        <p>go2rtc / WebRTC passthrough</p>
+      </div>
+    </div>
+
+    <div class="statusbar" id="statusbar">
+      <div class="chip" id="chipLive"><span class="dot" id="liveDot"></span><b id="liveText">--/4</b><i>LIVE</i></div>
+      <div class="chip"><b id="fpsText">--</b><i>AVG FPS</i></div>
+      <div class="chip"><b id="mbpsText">--</b><i>Mbps</i></div>
+      <div class="chip"><b id="engineText">--</b><i>ENGINE</i></div>
+      <div class="chip"><b id="resText">--</b><i>GRID RES</i></div>
+      <div class="chip"><b id="clockText">--:--:--</b><i>LOCAL</i></div>
+    </div>
+
+    <div class="controls">
+      <div class="segmented" id="qualityControls" role="group" aria-label="Grid quality"></div>
+      <button id="refreshAll" class="action">Refresh</button>
+      <button id="fullscreen" class="action">Fullscreen</button>
+    </div>
+  </header>
+
+  <main class="grid" id="grid"></main>
+
+  <template id="camera-card-template">
+    <section class="camera-card">
+      <div class="camera-frame">
+        <div class="player" data-player></div>
+        <div class="camera-label"></div>
+        <div class="status">Connecting</div>
+        <div class="metrics">
+          <div class="fps" data-fps>FPS --</div>
+          <div class="timestamp"></div>
+        </div>
+      </div>
+      <footer>
+        <strong></strong>
+        <span></span>
+        <button class="enlarge" title="Enlarge camera">Enlarge</button>
+        <button class="refresh" title="Reconnect camera">Reconnect</button>
+      </footer>
+    </section>
+  </template>
+
+  <div class="focus hidden" id="focusView" aria-hidden="true">
+    <div class="focus-toolbar">
+      <div>
+        <strong id="focusName"></strong>
+        <span id="focusDetails"></span>
+      </div>
+      <button id="focusClose">Close</button>
+    </div>
+    <div class="focus-frame">
+      <div class="player" id="focusPlayer"></div>
+      <div class="metrics focus-metrics">
+        <div class="fps" id="focusFps">FPS --</div>
+        <div class="timestamp focus-time" id="focusTimestamp"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/renderer.js"></script>
+</body>
+</html>
