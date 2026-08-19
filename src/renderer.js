@@ -131,7 +131,7 @@ async function tick() {
     focusFps.textContent = focusEntry.meter.ready ? `FPS ${focusEntry.meter.fps.toFixed(1)}` : 'FPS --';
   }
 
-  const total = players.size || 4;
+  const total = players.size;
   document.getElementById('liveText').textContent = `${live}/${total}`;
   document.getElementById('fpsText').textContent = live ? (fpsSum / live).toFixed(1) : '--';
   document.getElementById('mbpsText').textContent = kbpsSum ? (kbpsSum / 1000).toFixed(2) : '--';
@@ -178,6 +178,37 @@ function reconnectCamera(cameraId) {
   entry.el = makePlayer(entry.card.querySelector('[data-player]'), cameraId, quality);
 }
 
+const TILE_ASPECT = 16 / 9;
+
+/**
+ * Choose a column count for `count` tiles in a `w` x `h` area.
+ *
+ * Tries every arrangement and keeps the one that renders the largest picture
+ * per tile. Because the video is letterboxed inside its tile, the useful size
+ * is min(tileWidth / aspect, tileHeight) - so the best layout is not simply
+ * the squarest one. On a 16:9 window this gives 1x1, 2x1, 2x2, 3x2, 3x3,
+ * 4x3 ... which is what you would lay out by hand.
+ */
+function bestColumns(count, w, h) {
+  if (count <= 1) return 1;
+  let best = { cols: 1, size: 0 };
+  for (let cols = 1; cols <= count; cols += 1) {
+    const rows = Math.ceil(count / cols);
+    const size = Math.min((w / cols) / TILE_ASPECT, h / rows);
+    if (size > best.size) best = { cols, size };
+  }
+  return best.cols;
+}
+
+function applyGridLayout() {
+  const count = config.cameras.length;
+  if (!count) return;
+  const cols = bestColumns(count, grid.clientWidth || window.innerWidth, grid.clientHeight || window.innerHeight);
+  grid.style.setProperty('--cols', cols);
+  grid.style.setProperty('--rows', Math.ceil(count / cols));
+  grid.style.setProperty('--count', count);
+}
+
 function render() {
   players.clear();
   grid.innerHTML = '';
@@ -195,6 +226,7 @@ function render() {
     const el = makePlayer(card.querySelector('[data-player]'), camera.id, quality);
     players.set(camera.id, { el, card, meter: newMeter() });
   });
+  applyGridLayout();
 }
 
 function openFocus(camera) {
@@ -227,6 +259,13 @@ async function init() {
   tick();
   setInterval(tick, 1000);
 }
+
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  // Relayout only - tiles are not rebuilt, so streams keep running.
+  resizeTimer = setTimeout(() => { if (config) applyGridLayout(); }, 150);
+});
 
 document.getElementById('refreshAll').addEventListener('click', () => render());
 document.getElementById('fullscreen').addEventListener('click', () => {
