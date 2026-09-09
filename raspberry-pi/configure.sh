@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 umask 077
@@ -172,12 +172,12 @@ printf '%s\n' \
   'tls: true' >>"$tmp"
 
 echo
-echo "Configuration summary (passwords hidden):"
+echo "Configuration summary (passwords hidden):"`r`n echo "If anything is wrong, answer N below and re-enter the wizard with ./raspberry-pi/install.sh --configure."
 for ((i=0; i<${#summary_names[@]}; i++)); do
-  printf '  %d. %s — %s — user %s\n' "$((i + 1))" "${summary_names[$i]}" "${summary_ips[$i]}" "${summary_users[$i]}"
+  printf '  %d. %s â€” %s â€” user %s\n' "$((i + 1))" "${summary_names[$i]}" "${summary_ips[$i]}" "${summary_users[$i]}"
 done
 
-confirm "Save ${#summary_names[@]} camera(s)?" yes || {
+confirm "Save ${#summary_names[@]} camera(s)? (answer N to cancel and re-run --configure)" yes || {
   echo "Configuration cancelled; no file was changed."
   exit 1
 }
@@ -192,3 +192,6 @@ chmod 600 "$tmp"
 mv -f -- "$tmp" "$output"
 trap - EXIT INT TERM
 echo "Saved ${output} with mode 600."
+
+
+
