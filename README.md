@@ -1,11 +1,11 @@
-# Wyze Monitor - Windows and Raspberry Pi
+﻿# Wyze Monitor - Windows and Raspberry Pi
 
 A local multi-camera dashboard for **Wyze Cam v4 cameras with RTSP-enabled firmware**.
 Run it as a Windows desktop application or as a Raspberry Pi 4 / Pi 5 server
 viewed from a browser on your LAN. Configure your own cameras; no Wyze account
 credentials or API keys are needed by this application.
 
-**Start here: [Quick start](docs/QUICKSTART.md).**
+![Wyze Monitor four-camera dashboard](assets/wyze-monitor-four-camera-hero.png)`r`n`r`n**Start here: [Quick start](docs/QUICKSTART.md), or follow the [from-scratch guide](docs/FROM-SCRATCH.md) if you are new to Wyze RTSP and Raspberry Pi.**
 Pi users can download the dedicated installer ZIP from
 [Releases](https://github.com/bobster316/go2rtc-wyze-monitor/releases).
 
@@ -22,7 +22,7 @@ does not require Windows, Electron, or a pre-existing deployment.
 
 ## Documentation
 
-- [Quick start](docs/QUICKSTART.md) - shortest path to a working dashboard.
+- [Quick start](docs/QUICKSTART.md) - shortest path to a working dashboard.`r`n- [From-scratch setup](docs/FROM-SCRATCH.md) - complete beginner build and suggested YouTube chapter order.
 - [Camera and application configuration](docs/CONFIGURATION.md) - firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
 - [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
 - [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
@@ -79,3 +79,4 @@ MIT licensed; see [LICENSE](LICENSE). Not affiliated with or endorsed by Wyze La
 Uses [go2rtc](https://github.com/AlexxIT/go2rtc) and FFmpeg.
 `src/vendor/video-rtc.js` comes from go2rtc and retains its upstream licensing.
 Firmware is obtained from Wyze and is not redistributed here.
+
