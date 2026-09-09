@@ -5,7 +5,9 @@ Run it as a Windows desktop application or as a Raspberry Pi 4 / Pi 5 server
 viewed from a browser on your LAN. Configure your own cameras; no Wyze account
 credentials or API keys are needed by this application.
 
-![Wyze Monitor four-camera dashboard](assets/wyze-monitor-four-camera-hero.png)`r`n`r`n**Start here: [Quick start](docs/QUICKSTART.md), or follow the [from-scratch guide](docs/FROM-SCRATCH.md) if you are new to Wyze RTSP and Raspberry Pi.**
+![Wyze Monitor four-camera dashboard](assets/wyze-monitor-four-camera-hero.png)
+
+**Start here: [Quick start](docs/QUICKSTART.md), or follow the [from-scratch guide](docs/FROM-SCRATCH.md) if you are new to Wyze RTSP and Raspberry Pi.**
 Pi users can download the dedicated installer ZIP from
 [Releases](https://github.com/bobster316/go2rtc-wyze-monitor/releases).
 
@@ -79,4 +81,5 @@ MIT licensed; see [LICENSE](LICENSE). Not affiliated with or endorsed by Wyze La
 Uses [go2rtc](https://github.com/AlexxIT/go2rtc) and FFmpeg.
 `src/vendor/video-rtc.js` comes from go2rtc and retains its upstream licensing.
 Firmware is obtained from Wyze and is not redistributed here.
+
 
