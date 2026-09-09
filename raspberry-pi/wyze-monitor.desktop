@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Wyze Monitor
+Comment=Open the local multi-camera Wyze dashboard
+Exec=/usr/local/bin/wyze-monitor open
+Icon=wyze-monitor
+Terminal=false
+StartupNotify=true
+Categories=AudioVideo;Video;

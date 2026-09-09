@@ -1,0 +1,5 @@
+services:
+  monitor-web:
+    environment:
+      # Full-resolution grid at the cameras' native maximum frame rate.
+      DEFAULT_QUALITY: ${DEFAULT_QUALITY:-main}

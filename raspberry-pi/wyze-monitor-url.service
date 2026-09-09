@@ -1,0 +1,18 @@
+[Unit]
+Description=Wyze Monitor friendly local URL
+Wants=network-online.target avahi-daemon.service
+After=network-online.target avahi-daemon.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/wyze-monitor-url
+ExecStart=/usr/local/lib/wyze-monitor/publish-friendly-url.sh
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

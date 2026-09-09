@@ -82,7 +82,7 @@ function cameraUrl(config, cam, streamPath) {
   return `${scheme}://${user}:${pass}@${cam.ip}:${config.port}/${streamPath}/`;
 }
 
-function buildYaml(config) {
+function buildYaml(config, overrides = {}) {
   const ffmpeg = config.ffmpeg.replace(/\\/g, '/');
   const streams = {};
 
@@ -95,9 +95,12 @@ function buildYaml(config) {
   }
 
   const doc = {
-    api: { listen: '127.0.0.1:1984', origin: '*' },
-    rtsp: { listen: '127.0.0.1:8554' },
-    webrtc: { listen: ':8555', candidates: ['127.0.0.1:8555'] },
+    api: { listen: overrides.apiListen || '127.0.0.1:1984', origin: '*' },
+    rtsp: { listen: overrides.rtspListen || '127.0.0.1:8554' },
+    webrtc: {
+      listen: overrides.webrtcListen || ':8555',
+      candidates: overrides.candidates || ['127.0.0.1:8555'],
+    },
     log: { level: 'info' },
     streams,
   };
@@ -117,7 +120,7 @@ function generate() {
   return { config, outputPath: OUTPUT_PATH };
 }
 
-module.exports = { generate, loadConfig, OUTPUT_PATH, GO2RTC_DIR, ROOT };
+module.exports = { generate, loadConfig, buildYaml, OUTPUT_PATH, GO2RTC_DIR, ROOT };
 
 if (require.main === module) {
   try {

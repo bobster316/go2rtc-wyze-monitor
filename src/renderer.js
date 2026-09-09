@@ -1,4 +1,5 @@
 import { VideoRTC } from '/vendor/video-rtc.js';
+import { FullResolutionCadence30 } from '/smooth30.js';
 
 class VideoStream extends VideoRTC {
   oninit() {
@@ -25,9 +26,13 @@ const focusName = document.getElementById('focusName');
 const focusDetails = document.getElementById('focusDetails');
 const focusTimestamp = document.getElementById('focusTimestamp');
 const focusFps = document.getElementById('focusFps');
+const smooth30Toggle = document.getElementById('smooth30Toggle');
+const smooth30Badge = document.getElementById('smooth30Badge');
 
 const players = new Map();
 let focusEntry = null;
+let smooth30Enabled = localStorage.getItem('smooth30') !== 'off';
+let renderGeneration = 0;
 
 function formatTimestamp(date = new Date()) {
   const d = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
@@ -99,7 +104,7 @@ async function tick() {
   document.getElementById('clockText').textContent = clock.slice(-8);
 
   let live = 0;
-  let fpsSum = 0;
+  let outputFpsSum = 0;
   let kbpsSum = 0;
   let engine = '--';
   let gridRes = '--';
@@ -110,10 +115,15 @@ async function tick() {
     const fpsEl = entry.card.querySelector('[data-fps]');
     if (m.ready) {
       live += 1;
-      fpsSum += m.fps;
+      const outputFps = entry.smoother?.running && entry.smoothStats
+        ? entry.smoothStats.outputFps
+        : m.fps;
+      outputFpsSum += outputFps;
       kbpsSum += m.kbps;
       if (m.engine !== '--') engine = m.engine;
-      if (fpsEl) fpsEl.textContent = `FPS ${m.fps.toFixed(1)}`;
+      if (fpsEl) fpsEl.textContent = entry.smoother?.running && entry.smoothStats
+        ? `OUT ${outputFps.toFixed(1)} / SRC ${m.fps.toFixed(1)}`
+        : `SRC ${m.fps.toFixed(1)} FPS`;
       const vw = entry.el.video ? entry.el.video.videoWidth : 0;
       const vh = entry.el.video ? entry.el.video.videoHeight : 0;
       setStatus(entry.card, vw ? `${vw}x${vh}` : config.qualities[quality].label);
@@ -128,12 +138,14 @@ async function tick() {
 
   if (focusEntry) {
     await sampleMeter(focusEntry.el, focusEntry.meter);
-    focusFps.textContent = focusEntry.meter.ready ? `FPS ${focusEntry.meter.fps.toFixed(1)}` : 'FPS --';
+    if (!focusEntry.smoother || !focusEntry.smoother.running) {
+      focusFps.textContent = focusEntry.meter.ready ? `SRC ${focusEntry.meter.fps.toFixed(1)} FPS` : 'FPS --';
+    }
   }
 
   const total = players.size;
   document.getElementById('liveText').textContent = `${live}/${total}`;
-  document.getElementById('fpsText').textContent = live ? (fpsSum / live).toFixed(1) : '--';
+  document.getElementById('fpsText').textContent = live ? (outputFpsSum / live).toFixed(1) : '--';
   document.getElementById('mbpsText').textContent = kbpsSum ? (kbpsSum / 1000).toFixed(2) : '--';
   document.getElementById('engineText').textContent = engine;
   document.getElementById('resText').textContent = gridRes;
@@ -173,9 +185,11 @@ function renderQualityControls() {
 function reconnectCamera(cameraId) {
   const entry = players.get(cameraId);
   if (!entry) return;
+  stopSmoother(entry);
   setStatus(entry.card, 'Connecting');
   entry.meter = newMeter();
   entry.el = makePlayer(entry.card.querySelector('[data-player]'), cameraId, quality);
+  if (smooth30Enabled && !focusEntry) startGridSmoothing(entry);
 }
 
 const TILE_ASPECT = 16 / 9;
@@ -210,6 +224,8 @@ function applyGridLayout() {
 }
 
 function render() {
+  renderGeneration += 1;
+  for (const entry of players.values()) stopSmoother(entry);
   players.clear();
   grid.innerHTML = '';
   config.cameras.forEach(camera => {
@@ -224,12 +240,120 @@ function render() {
     grid.appendChild(card);
 
     const el = makePlayer(card.querySelector('[data-player]'), camera.id, quality);
-    players.set(camera.id, { el, card, meter: newMeter() });
+    const entry = { camera, el, card, meter: newMeter(), smoother: null, smoothStats: null };
+    players.set(camera.id, entry);
   });
   applyGridLayout();
+  startGridSmoothingAll();
+}
+
+function updateSmooth30Controls() {
+  smooth30Toggle.classList.toggle('active', smooth30Enabled);
+  smooth30Toggle.textContent = smooth30Enabled ? 'Smooth 30 On' : 'Smooth 30 Off';
+  smooth30Badge.classList.toggle('hidden', !smooth30Enabled || !focusEntry?.smoother?.running);
+}
+
+function stopSmoother(entry) {
+  if (entry?.smoother) entry.smoother.stop();
+  if (entry) {
+    entry.smoother = null;
+    entry.smoothStats = null;
+    const badge = entry.card?.querySelector('[data-smooth30-badge]');
+    if (badge) badge.classList.add('hidden');
+  }
+}
+
+async function startGridSmoothing(entry, generation = renderGeneration) {
+  if (!entry || entry.smoother || !smooth30Enabled || focusEntry) return;
+  const player = entry.card.querySelector('[data-player]');
+  const badge = entry.card.querySelector('[data-smooth30-badge]');
+  const smoother = new FullResolutionCadence30(entry.el.video, player, stats => {
+    if (players.get(entry.camera.id) !== entry || entry.smoother !== smoother) return;
+    entry.smoothStats = stats;
+    const fpsEl = entry.card.querySelector('[data-fps]');
+    if (fpsEl) fpsEl.textContent = `OUT ${stats.outputFps.toFixed(1)} / SRC ${stats.sourceFps.toFixed(1)}`;
+    if (badge) {
+      badge.textContent = stats.missedDeadlines
+        ? `SYNTHETIC 30 - ${stats.missedDeadlines} LATE`
+        : 'SYNTHETIC 30';
+    }
+  });
+  entry.smoother = smoother;
+  try {
+    await smoother.start();
+    if (generation !== renderGeneration || players.get(entry.camera.id) !== entry || !smooth30Enabled || focusEntry) {
+      stopSmoother(entry);
+      return;
+    }
+    if (badge) badge.classList.remove('hidden');
+  } catch (err) {
+    if (entry.smoother === smoother) {
+      stopSmoother(entry);
+      setStatus(entry.card, 'Smooth 30 unavailable');
+      console.warn(`Smooth 30 unavailable for ${entry.camera.name}:`, err);
+    }
+  }
+}
+
+function startGridSmoothingAll() {
+  if (!smooth30Enabled || focusEntry) return;
+  const generation = renderGeneration;
+  // Stagger GPU allocation and first uploads to avoid a four-stream burst.
+  [...players.values()].forEach((entry, index) => {
+    setTimeout(() => {
+      if (generation === renderGeneration) startGridSmoothing(entry, generation);
+    }, index * 120);
+  });
+}
+
+function stopGridSmoothingAll() {
+  for (const entry of players.values()) stopSmoother(entry);
+}
+async function startFocusSmoothing() {
+  const entry = focusEntry;
+  if (!entry || !smooth30Enabled || entry.smoother) return;
+  smooth30Toggle.disabled = true;
+  smooth30Toggle.textContent = 'Starting Smooth 30';
+  const smoother = new FullResolutionCadence30(entry.el.video, focusPlayer, stats => {
+    if (focusEntry !== entry) return;
+    focusFps.textContent = `OUT ${stats.outputFps.toFixed(1)} / SRC ${stats.sourceFps.toFixed(1)} FPS`;
+    focusDetails.textContent = `${focusedCamera.ip} / ${stats.width}x${stats.height} / full resolution`;
+    smooth30Badge.textContent = stats.missedDeadlines
+      ? `SYNTHETIC 30 - ${stats.missedDeadlines} LATE`
+      : 'SYNTHETIC 30';
+  });
+  entry.smoother = smoother;
+  try {
+    await smoother.start();
+    if (focusEntry !== entry || !smooth30Enabled) {
+      stopSmoother(entry);
+      return;
+    }
+  } catch (err) {
+    entry.smoother = null;
+    smooth30Enabled = false;
+    localStorage.setItem('smooth30', 'off');
+    focusDetails.textContent = `Smooth 30 unavailable: ${err.message}`;
+  } finally {
+    smooth30Toggle.disabled = false;
+    updateSmooth30Controls();
+  }
+}
+
+function setSmooth30(enabled) {
+  smooth30Enabled = enabled;
+  localStorage.setItem('smooth30', enabled ? 'on' : 'off');
+  if (focusEntry?.smoother) {
+    stopSmoother(focusEntry);
+  }
+  stopGridSmoothingAll();
+  updateSmooth30Controls();
+  if (enabled && focusEntry) startFocusSmoothing();
+  else if (enabled) startGridSmoothingAll();
 }
 
 function openFocus(camera) {
+  stopGridSmoothingAll();
   focusedCamera = camera;
   focusName.textContent = camera.name;
   focusDetails.textContent = `${camera.ip} / full resolution`;
@@ -238,15 +362,19 @@ function openFocus(camera) {
   focusView.classList.remove('hidden');
   focusView.setAttribute('aria-hidden', 'false');
   const el = makePlayer(focusPlayer, camera.id, 'main');
-  focusEntry = { el, meter: newMeter() };
+  focusEntry = { el, meter: newMeter(), smoother: null };
+  updateSmooth30Controls();
+  if (smooth30Enabled) startFocusSmoothing();
 }
 
 function closeFocus() {
   focusedCamera = null;
+  if (focusEntry?.smoother) stopSmoother(focusEntry);
   focusEntry = null;
   focusPlayer.innerHTML = '';
   focusView.classList.add('hidden');
   focusView.setAttribute('aria-hidden', 'true');
+  startGridSmoothingAll();
 }
 
 async function init() {
@@ -273,6 +401,7 @@ document.getElementById('fullscreen').addEventListener('click', () => {
   else document.exitFullscreen();
 });
 document.getElementById('focusClose').addEventListener('click', closeFocus);
+smooth30Toggle.addEventListener('click', () => setSmooth30(!smooth30Enabled));
 focusView.addEventListener('click', e => { if (e.target === focusView) closeFocus(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && focusedCamera) closeFocus(); });
 

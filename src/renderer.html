@@ -18,7 +18,7 @@
 
     <div class="statusbar" id="statusbar">
       <div class="chip" id="chipLive"><span class="dot" id="liveDot"></span><b id="liveText">--/4</b><i>LIVE</i></div>
-      <div class="chip"><b id="fpsText">--</b><i>AVG FPS</i></div>
+      <div class="chip"><b id="fpsText">--</b><i>AVG OUT</i></div>
       <div class="chip"><b id="mbpsText">--</b><i>Mbps</i></div>
       <div class="chip"><b id="engineText">--</b><i>ENGINE</i></div>
       <div class="chip"><b id="resText">--</b><i>GRID RES</i></div>
@@ -27,6 +27,7 @@
 
     <div class="controls">
       <div class="segmented" id="qualityControls" role="group" aria-label="Grid quality"></div>
+      <button id="smooth30Toggle" class="action" type="button">Smooth 30 On</button>
       <button id="refreshAll" class="action">Refresh</button>
       <button id="fullscreen" class="action">Fullscreen</button>
     </div>
@@ -40,6 +41,7 @@
         <div class="player" data-player></div>
         <div class="camera-label"></div>
         <div class="status">Connecting</div>
+        <div class="smooth30-badge tile-smooth30 hidden" data-smooth30-badge>SYNTHETIC 30</div>
         <div class="metrics">
           <div class="fps" data-fps>FPS --</div>
           <div class="timestamp"></div>
@@ -60,7 +62,10 @@
         <strong id="focusName"></strong>
         <span id="focusDetails"></span>
       </div>
-      <button id="focusClose">Close</button>
+      <div class="focus-toolbar-actions">
+        <span class="smooth30-badge hidden" id="smooth30Badge">SYNTHETIC 30</span>
+        <button id="focusClose" type="button">Close</button>
+      </div>
     </div>
     <div class="focus-frame">
       <div class="player" id="focusPlayer"></div>

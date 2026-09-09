@@ -1,200 +1,129 @@
 # Troubleshooting
 
-Failure modes in rough order of how much time they cost to work out.
+## Start with the right layer
 
----
+1. Camera: RTSP enabled, reachable IP/port, correct camera credentials.
+2. Server: go2rtc and monitor-web available.
+3. Signalling/media: WebSocket and WebRTC connectivity.
+4. Viewer: changing frames, correct quality, GPU capacity and Smooth30 state.
 
-## No RTSP option in the Wyze app at all
+A health response is not an end-to-end camera test.
 
-Your camera is on standard firmware. RTSP ships as a separate RTSP-enabled build
-for the Wyze Cam v4 — it is not in the general release, and no amount of digging
-through Advanced Settings will reveal it.
+## No RTSP option in the Wyze app
 
-Check **Settings → Device Info → Firmware Version**, then see the firmware
-section in the [README](../README.md#1-firmware-with-rtsp-support--read-this-first).
+Use [camera preparation](CONFIGURATION.md#1-prepare-each-camera).
+The v4 beta announcement and the older v2/v3/Pan RTSP support page describe
+different firmware routes. Do not flash another model's image.
+The application cannot add RTSP support to the camera.
 
-Two things that bite afterwards:
+## Pi: installer will not run
 
-- **Auto-update will silently remove RTSP.** A routine firmware update puts the
-  camera back on a standard build and the stream dies. If a camera that worked
-  for months suddenly stops and the RTSP menu has vanished, this is why.
-- **RTSP is enabled per camera**, with its own username and password each. It is
-  easy to enable it on three of four and spend an evening on the fourth.
+- Permission denied: `chmod +x raspberry-pi/*.sh raspberry-pi/wyze-monitor`.
+- Bad interpreter / ^M: use the release ZIP or a Git checkout honoring .gitattributes;
+  shell scripts must use LF line endings.
+- Unsupported architecture: inspect both `uname -m` and
+  `dpkg --print-architecture`.
+- Insufficient storage: the preflight requires 2 GiB free.
+- Docker inaccessible: check `sudo docker info` and
+  `sudo docker compose version`; do not reinstall a working Docker deployment.
+- Apt/image download failure: check DNS, internet access, system clock and the
+  OS release's repository support.
+- Private runtime directory permission failure: rerun setup as the same normal
+  login that owns the project. Do not make credentials world-readable.
 
----
-
-## Streams time out — `i/o timeout` in the go2rtc log
-
-**This is the big one.** go2rtc's built-in RTSP client cannot complete the TLS
-handshake with these cameras. The TCP socket opens, then the read times out
-about five seconds later:
-
-```
-WRN error="read tcp 192.168.1.x:42505->192.168.1.10:322: i/o timeout"
-    url=rtsps://Front:***@192.168.1.10:322/stream0/
-```
-
-Things that do **not** work, all confirmed:
-
-| Source type | Result |
-|---|---|
-| `rtsps://user:pass@ip:322/stream0/` | i/o timeout |
-| `rtspx://user:pass@ip:322/stream0/` | i/o timeout, identical |
-| `ffmpeg:rtsps://...#video=copy` | Output contains no stream |
-| `ffmpeg:...#input=-rtsp_transport tcp ...` | The `#input=` override is silently dropped; the producer never starts |
-
-What works is an `exec:` source running FFmpeg directly, which is what
-`scripts/generate-go2rtc-config.js` emits:
-
-```yaml
-front_main: 'exec:ffmpeg -hide_banner -loglevel error -fflags nobuffer -flags low_delay
-  -rtsp_transport tcp -protocol_whitelist tcp,tls,rtsp
-  -i rtsps://user:pass@192.168.1.10:322/stream0/ -an -c:v copy -f rtsp {output}'
-```
-
-`-protocol_whitelist tcp,tls,rtsp` is **mandatory**. Without `tls` in that list,
-FFmpeg refuses the TLS layer and you get the same timeout. This is the single
-flag that makes the whole thing work.
-
-`-c:v copy` means no decode and no re-encode — the whole point of the design.
-
-If you are tempted to tidy these into plain `rtsps://` entries: don't. It will
-look neater and it will not work.
-
----
-
-## `did not find expected hexdecimal number` from go2rtc
-
-A Windows path in double quotes in YAML. `"C:\Users\..."` makes the parser read
-`\U` as a unicode escape:
-
-```yaml
-ffmpeg:
-  bin: "C:\Users\me\ffmpeg\bin\ffmpeg.exe"     # breaks
-  bin: 'C:\Users\me\ffmpeg\bin\ffmpeg.exe'     # fine (single quotes)
-  bin: 'C:/Users/me/ffmpeg/bin/ffmpeg.exe'     # better (forward slashes)
-```
-
-Use forward slashes in `cameras.yaml`. The generator normalises backslashes, but
-your own edits to the file are yours to get right.
-
----
-
-## Antivirus is intercepting the camera connection
-
-Check what certificate you are actually talking to:
+## Pi: port 80 already in use
 
 ```bash
-openssl s_client -connect 192.168.1.10:322
+sudo ss -ltnp
+sudo docker ps --format 'table {{.Names}}\t{{.Ports}}'
 ```
 
-Expected — the camera's own certificate:
+Do not terminate unrelated services. The standard friendly-URL installer needs
+port 80; use another Pi or plan a separate reverse-proxy configuration.
 
-```
-subject=C=US, O=Wyze Labs, CN=RTSP Server
-```
+## Friendly URL does not resolve
 
-If the **issuer** names your antivirus, it is man-in-the-middling the connection:
-
-```
-issuer=OU=generated by AVG Antivirus for self-signed certificates,
-       O=AVG Web/Mail Shield, CN=AVG Web/Mail Shield Self-signed Root
-```
-
-AVG, Avast, Kaspersky, ESET and BitDefender all do this on some settings. It does
-not always break streaming, but it is the first suspect for streams that connect
-and then drop intermittently. Exclude the camera IPs, or port 322, from the
-product's SSL/HTTPS scanning.
-
----
-
-## Tiles are black in HD but fine in Eco
-
-Four simultaneous 2560x1440 H.264 decodes with no GPU acceleration will not keep
-up. Check `chrome://gpu` behaviour indirectly: if CPU is high (tens of percent
-rather than low single digits), Chromium is decoding in software.
-
-- Update your GPU drivers
-- Confirm the GPU supports H.264 decode — anything from the last decade does
-- Or just use Eco for the grid; enlarging still gives you full resolution
-
-For reference, four 2K streams on working hardware costs about **1.3% CPU** total
-across Electron, go2rtc and FFmpeg.
-
----
-
-## One camera is stuck at a lower frame rate than the others
-
-Almost always the camera's Wi-Fi link, not the pipeline. Because nothing is
-transcoded here, every tile should sit at the camera's own encode rate (20 fps on
-the v4). A tile consistently below the others is that camera struggling to get
-frames onto the network.
-
-- Check signal strength in the Wyze app
-- Try Eco for that camera's position in the grid
-- Wired-backhaul mesh nodes or a closer AP help more than anything in software
-
-Uneven frame rates *before* migrating from an MJPEG pipeline are usually the CPU
-bottleneck instead, and go away here.
-
----
-
-## A camera works, then stops after a router reboot
-
-Its DHCP lease changed and `cameras.yaml` still has the old address. Give every
-camera a DHCP reservation on your router.
-
----
-
-## `cameras.yaml not found` / `still has the placeholder password`
-
-The setup script creates `cameras.yaml` from the example and stops so you can
-edit it. Fill in real values — the generator refuses to build a config while any
-camera still says `CHANGE_ME`.
-
----
-
-## Useful commands
-
-Check the app can see go2rtc:
-
-```powershell
-Invoke-WebRequest -Uri 'http://127.0.0.1:8765/api/health' -UseBasicParsing | Select-Object -ExpandProperty Content
-```
-
-List go2rtc streams and how many consumers each has:
-
-```powershell
-Invoke-WebRequest -Uri 'http://127.0.0.1:1984/api/streams' -UseBasicParsing | Select-Object -ExpandProperty Content
-```
-
-Run go2rtc on its own — its web UI at <http://127.0.0.1:1984> has a test player
-per stream, which is the fastest way to tell a camera problem from an app problem:
-
-```powershell
-cd go2rtc; .\go2rtc.exe -config go2rtc.yaml
-```
-
-Probe a camera directly, bypassing everything in this project:
+Check the numeric diagnostic URL using your actual Pi address:
 
 ```bash
-ffprobe -rtsp_transport tcp -protocol_whitelist tcp,tls,rtsp \
-  -i "rtsps://user:pass@192.168.1.10:322/stream0/"
+curl -fsS http://192.168.1.100:18765/api/health
+systemctl status wyze-monitor-url --no-pager
+systemctl status avahi-daemon --no-pager
 ```
 
-A healthy Wyze Cam v4 answers with:
+If numeric HTTP works, check mDNS support, same-LAN connectivity and friendly-name
+conflicts. Guest Wi-Fi and routed VLANs may block mDNS. Two servers cannot own the
+same name. If the Pi IP changed, follow [address recovery](OPERATIONS.md#recover-after-a-pi-ip-address-change).
 
-```
-Stream #0:0: Audio: aac (LC), 16000 Hz, mono
-Stream #0:1: Video: h264 (High), yuv420p, 2560x1440, 20 fps
-```
+## Dashboard loads but every tile is black
 
-If that fails, nothing in this project will help until it succeeds.
+Check `wyze-monitor status` and then `wyze-monitor logs` privately.
+Verify camera addresses and credentials. Ensure the viewer can reach the Pi's
+WebRTC TCP/UDP port (default 18555); the ICE candidate must contain the current
+Pi address. Refresh the page after redeploying.
 
----
+Disable Smooth30 to isolate GPU presentation problems.
+Try a current desktop Chrome/Chromium browser and inspect GPU acceleration.
+MSE may be used as fallback; a working HTTP page alone does not prove WebRTC works.
 
-## Kill everything
+## One tile is offline
+
+Use per-camera Reconnect. Check the camera's Wi-Fi and DHCP reservation.
+A successful TCP 322 check only proves the port is reachable, not that the
+username/password or stream path is correct. Check the camera's RTSP settings.
+After editing cameras.yaml, regenerate/redeploy on Pi or restart the Windows app.
+
+## RTSPS timeout
+
+Development testing found direct go2rtc RTSPS unreliable with these cameras.
+Keep the generated FFmpeg exec sources, TCP transport and whitelist including
+tcp,tls,rtsp. FFmpeg uses stream copy, not transcoding.
+
+TLS-inspecting antivirus software on Windows may interfere. Check its logs and
+camera-specific exceptions rather than disabling system protection globally.
+
+## YAML and Windows path errors
+
+Use spaces, not tabs. Quote passwords containing YAML punctuation.
+Use forward slashes in ffmpeg paths, e.g. C:/ffmpeg/bin/ffmpeg.exe.
+A path with spaces is not supported by the current unquoted exec command;
+install FFmpeg on PATH or use a path without spaces.
+
+Do not share cameras.yaml to request help. Make a separate sanitized example.
+
+## Low FPS or frozen images
+
+Turn Smooth30 off and inspect source cadence. Night mode can lower camera FPS.
+Check Wi-Fi, browser visibility/throttling, decode capacity and Pi temperature.
+Eco is a manual reduced-resolution option; it is never proof of full-resolution
+performance. An OUT counter can continue while an input is stale.
+See [performance limitations](PERFORMANCE.md).
+
+## Windows: no startup or conflicting process
+
+Run setup again and read its error. Check that node, npm and ffmpeg are on PATH.
+If port 8765 or go2rtc ports are occupied, identify the owning application before
+stopping anything. The app may reuse an existing go2rtc instance with an incompatible
+configuration. Do not kill every FFmpeg or Electron process on the machine.
+
+Local health check while the app runs:
 
 ```powershell
-taskkill /F /IM electron.exe; taskkill /F /IM go2rtc.exe; taskkill /F /IM ffmpeg.exe
+Invoke-RestMethod http://127.0.0.1:8765/api/health
 ```
+
+## Useful Pi diagnostics
+
+```bash
+wyze-monitor status
+curl -fsS http://192.168.1.100:18765/api/health
+vcgencmd measure_temp
+vcgencmd get_throttled
+```
+
+Substitute the Pi's configured LAN address in the curl command.
+vcgencmd is only available on systems that provide it.
+
+Before posting an issue, include your release, Pi model, OS architecture, browser,
+camera count and sanitized error text. Remove credentials, full RTSP URLs,
+private footage, keys, cookies and identifying camera labels.

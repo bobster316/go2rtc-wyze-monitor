@@ -1,0 +1,38 @@
+name: Validate source and Pi configuration
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  source:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --ignore-scripts --no-fund --no-audit
+      - run: npm test
+      - name: Validate shell scripts
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          for script in raspberry-pi/*.sh raspberry-pi/wyze-monitor raspberry-pi/experiments/*.sh; do
+            bash -n "$script"
+          done
+      - name: Validate Compose profiles with example values
+        if: runner.os == 'Linux'
+        run: |
+          docker compose --env-file raspberry-pi/.env.example -f raspberry-pi/compose.yaml -f raspberry-pi/compose.pi4.yaml config --quiet
+          docker compose --env-file raspberry-pi/.env.example -f raspberry-pi/compose.yaml -f raspberry-pi/compose.pi5.yaml config --quiet
+      - name: Build clean Pi installer
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./scripts/build-pi-installer.ps1

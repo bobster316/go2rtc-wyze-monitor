@@ -1,5 +1,11 @@
 # Your camera details and passwords - never commit
 cameras.yaml
+.cameras.yaml.tmp.*
+.env
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Generated from cameras.yaml, contains credentials
 go2rtc/go2rtc.yaml
@@ -20,3 +26,28 @@ userdata/
 *.bak-*
 .DS_Store
 Thumbs.db
+
+# Raspberry Pi local and generated files
+raspberry-pi/.env
+raspberry-pi/runtime/
+
+# Research report build dependencies and rendered verification pages
+.pdf-deps/
+tmp/pdfs/
+
+# Local Raspberry Pi and browser verification artifacts
+tmp/chrome-*/
+tmp/edge-*/
+tmp/installer-test/
+tmp/pi-installer-package/
+tmp/pi4-dom-*
+tmp/pi4_known_hosts
+tmp/read-dashboard-cdp.mjs
+
+# Private captures and generated deliverables stay local.
+tmp/
+output/
+*.mp4
+*.mov
+*.wav
+*.mp3

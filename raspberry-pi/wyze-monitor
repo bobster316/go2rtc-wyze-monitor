@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="$(cd "$(dirname "$script_path")" && pwd)"
+project_dir="$(cd "${script_dir}/.." && pwd)"
+env_file="${script_dir}/.env"
+
+[[ -f "$env_file" ]] || {
+  echo "Wyze Monitor is not configured. Run: ${script_dir}/install.sh" >&2
+  exit 1
+}
+
+# shellcheck disable=SC1090
+set -a
+source "$env_file"
+set +a
+
+profile="${PI_PROFILE:-}"
+if [[ "$profile" != "pi4" && "$profile" != "pi5" ]]; then
+  model="$(tr -d '\0' </proc/device-tree/model 2>/dev/null || true)"
+  case "$model" in
+    *"Raspberry Pi 4"*) profile="pi4" ;;
+    *"Raspberry Pi 5"*) profile="pi5" ;;
+    *) echo "Unable to detect Raspberry Pi 4 or Pi 5." >&2; exit 1 ;;
+  esac
+fi
+
+docker_cmd=()
+ensure_docker() {
+  ((${#docker_cmd[@]})) && return 0
+  if docker compose version >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    docker_cmd=(docker)
+  elif command -v sudo >/dev/null 2>&1 && sudo docker compose version >/dev/null && sudo docker info >/dev/null; then
+    docker_cmd=(sudo docker)
+  else
+    echo "Docker Engine and Compose are unavailable." >&2
+    return 1
+  fi
+}
+
+compose_files=(-f "${script_dir}/compose.yaml" -f "${script_dir}/compose.${profile}.yaml")
+dc() {
+  ensure_docker
+  "${docker_cmd[@]}" compose --env-file "$env_file" "${compose_files[@]}" "$@"
+}
+dashboard_url="http://${FRIENDLY_HOSTNAME:-wyze-monitor}.local"
+diagnostic_url="http://${PI_HOST_IP}:${MONITOR_PUBLIC_PORT:-18765}"
+
+wait_healthy() {
+  local health_url="${diagnostic_url}/api/health"
+  for _ in {1..20}; do
+    if command -v curl >/dev/null 2>&1 && curl -fsS "$health_url" >/dev/null 2>&1; then return 0; fi
+    if command -v wget >/dev/null 2>&1 && wget -q -O /dev/null "$health_url"; then return 0; fi
+    sleep 1
+  done
+  echo "Wyze Monitor did not become healthy at ${health_url}." >&2
+  return 1
+}
+
+start_monitor() {
+  if wait_healthy; then
+    echo "Wyze Monitor is running: ${dashboard_url}"
+    return 0
+  fi
+  if [[ ! -f "${script_dir}/runtime/go2rtc.yaml" ]]; then
+    "${script_dir}/setup.sh" "$profile"
+  else
+    dc up -d go2rtc monitor-web
+  fi
+  wait_healthy
+  echo "Wyze Monitor is running: ${dashboard_url}"
+}
+
+action="${1:-start}"
+case "$action" in
+  start)
+    start_monitor
+    ;;
+  stop)
+    dc stop monitor-web go2rtc
+    echo "Wyze Monitor stopped."
+    ;;
+  restart)
+    dc restart go2rtc monitor-web
+    wait_healthy
+    echo "Wyze Monitor restarted: ${dashboard_url}"
+    ;;
+  status)
+    dc ps
+    if wait_healthy; then echo "Dashboard: ${dashboard_url}"; fi
+    ;;
+  open)
+    start_monitor
+    if [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]] && command -v xdg-open >/dev/null 2>&1; then
+      nohup xdg-open "$dashboard_url" >/dev/null 2>&1 &
+      echo "Opened Wyze Monitor in the default browser."
+    else
+      echo "No graphical desktop was detected. Open this address on another device:"
+      echo "$dashboard_url"
+    fi
+    ;;
+  logs)
+    dc logs --tail 100 -f go2rtc monitor-web
+    ;;
+  configure)
+    exec "${script_dir}/install.sh" --configure
+    ;;
+  url)
+    echo "$dashboard_url"
+    ;;
+  help|-h|--help)
+    cat <<'EOF'
+Usage: wyze-monitor [start|stop|restart|status|open|logs|configure|url]
+
+With no argument, Wyze Monitor starts and prints its dashboard URL.
+EOF
+    ;;
+  *)
+    echo "Unknown command: $action" >&2
+    echo "Run: wyze-monitor help" >&2
+    exit 2
+    ;;
+esac

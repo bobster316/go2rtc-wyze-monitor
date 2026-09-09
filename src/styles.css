@@ -223,6 +223,53 @@ button.active { background: #de2d26; color: white; }
   font-size: 18px;
 }
 .focus-toolbar button { border: 1px solid #344251; border-radius: 8px; }
+.focus-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.smooth30-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid #e8a33d;
+  border-radius: 6px;
+  color: #ffd58a;
+  background: rgba(101, 60, 6, 0.45);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.7px;
+}
+.smooth30-badge.hidden { display: none; }
+.tile-smooth30 {
+  position: absolute;
+  z-index: 3;
+  left: 10px;
+  bottom: 10px;
+  margin: 0;
+  pointer-events: none;
+}
+#smooth30Toggle.active {
+  border-color: #e8a33d;
+  background: #5d390b;
+  color: #ffe0a8;
+}
+#smooth30Toggle:disabled { cursor: wait; opacity: 0.72; }
+#focusPlayer {
+  position: relative;
+  overflow: hidden;
+}
+.smooth30-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #020304;
+}
+.player.smooth30-active video-stream { opacity: 0; }
 .error { padding: 24px; color: #ffb4aa; white-space: pre-wrap; }
 
 /* Narrow windows: one camera per row, scrolling, regardless of count. */

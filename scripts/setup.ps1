@@ -8,6 +8,7 @@
 #>
 
 $ErrorActionPreference = 'Stop'
+$go2rtcVersion = 'v1.9.14'
 
 $root = Split-Path -Parent $PSScriptRoot
 $go2rtcDir = Join-Path $root 'go2rtc'
@@ -45,8 +46,8 @@ if (Test-Path $go2rtcExe) {
     Write-Host "[ok] go2rtc.exe already present"
 } else {
     New-Item -ItemType Directory -Force -Path $go2rtcDir | Out-Null
-    Write-Host "`nDownloading latest go2rtc..."
-    $release = Invoke-RestMethod 'https://api.github.com/repos/AlexxIT/go2rtc/releases/latest' -Headers @{ 'User-Agent' = 'go2rtc-wyze-monitor' }
+    Write-Host "`nDownloading go2rtc $go2rtcVersion..."
+    $release = Invoke-RestMethod "https://api.github.com/repos/AlexxIT/go2rtc/releases/tags/$go2rtcVersion" -Headers @{ 'User-Agent' = 'go2rtc-wyze-monitor' }
     $asset = $release.assets | Where-Object { $_.name -eq 'go2rtc_win64.zip' } | Select-Object -First 1
     if (-not $asset) { throw "Could not find go2rtc_win64.zip in release $($release.tag_name)" }
 
@@ -60,13 +61,19 @@ if (Test-Path $go2rtcExe) {
 # --- 4. npm install ---------------------------------------------------------
 Write-Host "`nInstalling npm dependencies (this pulls Electron, ~200MB)..."
 Push-Location $root
-try { & npm install --no-fund --no-audit } finally { Pop-Location }
+try {
+    & npm ci --no-fund --no-audit
+    if ($LASTEXITCODE -ne 0) { throw 'npm dependency installation failed.' }
+} finally { Pop-Location }
 Write-Host "[ok] dependencies installed"
 
 # --- 5. Generate go2rtc config ---------------------------------------------
 Write-Host "`nGenerating go2rtc config..."
 Push-Location $root
-try { & node scripts/generate-go2rtc-config.js } finally { Pop-Location }
+try {
+    & node scripts/generate-go2rtc-config.js
+    if ($LASTEXITCODE -ne 0) { throw 'Camera configuration generation failed.' }
+} finally { Pop-Location }
 
 Write-Host "`nSetup complete. Start the monitor with:" -ForegroundColor Green
 Write-Host "  npm start`n"
