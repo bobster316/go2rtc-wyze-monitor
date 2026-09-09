@@ -122,8 +122,8 @@ DEFAULT_QUALITY=main
 | `PI_HOST_IP` | Reserved IPv4 address of this Pi, not a camera. Docker binds to it and WebRTC advertises it. |
 | `FRIENDLY_HOSTNAME` | Name without `.local`; lowercase letters, digits and internal hyphens. |
 | `FRIENDLY_HTTP_PORT` | Must be 80 for the installer-supported no-port friendly URL. |
-| `MONITOR_PUBLIC_PORT` | Diagnostic HTTP port; 1024?65535. |
-| `WEBRTC_PUBLIC_PORT` | TCP and UDP media port; 1024?65535; different from diagnostic HTTP. |
+| `MONITOR_PUBLIC_PORT` | Diagnostic HTTP port; 1024-65535. |
+| `WEBRTC_PUBLIC_PORT` | TCP and UDP media port; 1024-65535; different from diagnostic HTTP. |
 | `DEFAULT_QUALITY` | `main` recommended; `sub` explicitly selects lower resolution. |
 
 The optional `PI_PROFILE` environment value can select `pi4` or `pi5` for the

@@ -4,11 +4,11 @@
 
 ```text
 Camera RTSPS H.264
-  ? FFmpeg exec producer: -an -c:v copy
-  ? go2rtc internal RTSP
-  ? WebRTC (MSE fallback)
-  ? browser H.264 decode
-  ? optional WebGL Smooth30 canvas
+  -> FFmpeg exec producer: -an -c:v copy
+  -> go2rtc internal RTSP
+  -> WebRTC (MSE fallback)
+  -> browser H.264 decode
+  -> optional WebGL Smooth30 canvas
 ```
 
 FFmpeg demuxes and remuxes the camera video without decoding or re-encoding.

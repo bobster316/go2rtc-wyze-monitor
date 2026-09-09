@@ -77,7 +77,7 @@ npm start
 ## Confirm it is working
 
 - Every configured tile shows a changing live picture.
-- HD reports your camera's main-stream resolution, normally 2560?1440 on v4.
+- HD reports your camera's main-stream resolution, normally 2560x1440 on v4.
 - Turn Smooth30 off and on. `SRC` is source cadence; `OUT` is generated cadence.
 - On the Pi, `wyze-monitor status` reports running services.
 - A healthy API alone confirms server availability, not every camera's live picture.

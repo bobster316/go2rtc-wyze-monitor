@@ -24,8 +24,8 @@ of every release or a guarantee for another viewer.
 
 | Server | Viewer | Observation |
 |---|---|---|
-| Pi 5, Raspberry Pi OS ARM64 | External Chrome client | Four 2560?1440 canvases, OUT 30.0 for ten consecutive samples over about 20 seconds; no LATE indicator |
-| Pi 4 Model B Rev 1.5, 4 GB, Trixie armhf userland / aarch64 kernel | External browser | Four 2560?1440 canvases, OUT 30.0 for ten consecutive samples; 47.7?C and throttling flags 0x0 |
+| Pi 5, Raspberry Pi OS ARM64 | External Chrome client | Four 2560x1440 canvases, OUT 30.0 for ten consecutive samples over about 20 seconds; no LATE indicator |
+| Pi 4 Model B Rev 1.5, 4 GB, Trixie armhf userland / aarch64 kernel | External browser | Four 2560x1440 canvases, OUT 30.0 for ten consecutive samples; 47.7 C and throttling flags 0x0 |
 | Pi 5 coexistence | Existing unrelated Compose application | Other application remained running during the test |
 
 The Pi 4 images resolved to native ARM32; Pi 5 used ARM64. These results establish
@@ -38,7 +38,7 @@ a minimum hardware specification or a portable performance promise.
 
 ## Not yet certified
 
-- Full Pi 4/Pi 5 ? ARM32/ARM64 ? Lite/Desktop matrix.
+- Full Pi 4/Pi 5 x ARM32/ARM64 x Lite/Desktop matrix.
 - Four-stream local Pi display at 30 FPS.
 - 30-minute thermal and overnight changing-light soak.
 - Long-duration stale-input detection and automatic recovery.

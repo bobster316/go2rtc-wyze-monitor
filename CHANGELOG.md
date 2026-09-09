@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.1.0 ? 2026-09-09
+## 1.1.1 - 2026-09-09
+
+- Correct text encoding in public guides and installer documentation.
+- No application behavior changes from 1.1.0.
+
+## 1.1.0 - 2026-09-09
 
 - Publish the Raspberry Pi 4 and Pi 5 deployment alongside the Windows app.
 - Add camera wizard, architecture detection, Docker setup, desktop/SSH launchers

@@ -1,4 +1,4 @@
-# Wyze Monitor ? Windows and Raspberry Pi
+# Wyze Monitor - Windows and Raspberry Pi
 
 A local multi-camera dashboard for **Wyze Cam v4 cameras with RTSP-enabled firmware**.
 Run it as a Windows desktop application or as a Raspberry Pi 4 / Pi 5 server
@@ -22,17 +22,17 @@ does not require Windows, Electron, or a pre-existing deployment.
 
 ## Documentation
 
-- [Quick start](docs/QUICKSTART.md) ? shortest path to a working dashboard.
-- [Camera and application configuration](docs/CONFIGURATION.md) ? firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
-- [Raspberry Pi installation](raspberry-pi/README.md) ? OS preparation, installer wizard, Docker, Desktop and SSH.
-- [Windows installation](docs/WINDOWS.md) ? prerequisites, setup, launch and configuration.
-- [Operation, backup, recovery and removal](docs/OPERATIONS.md) ? recreate your installation and maintain it.
-- [Troubleshooting](docs/TROUBLESHOOTING.md) ? camera, browser, network, Docker and installer problems.
-- [Architecture](docs/ARCHITECTURE.md) ? stream path, shared code and process ownership.
-- [Performance and test status](docs/PERFORMANCE.md) ? source FPS versus synthetic presentation and what has actually been tested.
-- [Pi compatibility matrix](raspberry-pi/COMPATIBILITY.md) ? remaining certification work.
-- [Privacy and security](SECURITY.md) ? credentials, logs and safe support reports.
-- [Contributing and release checks](CONTRIBUTING.md) ? reproduce validation and build the Pi archive.
+- [Quick start](docs/QUICKSTART.md) - shortest path to a working dashboard.
+- [Camera and application configuration](docs/CONFIGURATION.md) - firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
+- [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
+- [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
+- [Operation, backup, recovery and removal](docs/OPERATIONS.md) - recreate your installation and maintain it.
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - camera, browser, network, Docker and installer problems.
+- [Architecture](docs/ARCHITECTURE.md) - stream path, shared code and process ownership.
+- [Performance and test status](docs/PERFORMANCE.md) - source FPS versus synthetic presentation and what has actually been tested.
+- [Pi compatibility matrix](raspberry-pi/COMPATIBILITY.md) - remaining certification work.
+- [Privacy and security](SECURITY.md) - credentials, logs and safe support reports.
+- [Contributing and release checks](CONTRIBUTING.md) - reproduce validation and build the Pi archive.
 - [Changelog](CHANGELOG.md).
 
 ## What it does
@@ -41,11 +41,11 @@ Displays all configured cameras in an adaptive grid, with HD/Eco selection,
 per-camera reconnect, enlarged main-stream views and fullscreen monitoring.
 Smooth30 optionally blends source frames in the viewing browser, with visible
 `SRC`, `OUT` and synthetic-frame labels. Full-resolution HD sources retain
-their 2560?1440 backing canvas. Eco is an explicit user choice.
+their 2560x1440 backing canvas. Eco is an explicit user choice.
 
 ```text
-Wyze RTSPS/H.264 ? FFmpeg stream copy ? go2rtc ? WebRTC ? browser decode
-                                                           ?
+Wyze RTSPS/H.264 -> FFmpeg stream copy -> go2rtc -> WebRTC -> browser decode
+                                                           v
                                                optional GPU Smooth30
 ```
 
