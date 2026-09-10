@@ -275,7 +275,10 @@ function render() {
 }
 
 function recordingSource(entry) {
-  return entry?.card?.querySelector('.smooth30-canvas') || entry?.el?.video;
+  // Capture the decoded video element directly. Electron can display the
+  // Smooth30 WebGL canvas correctly but may return black pixels when that
+  // canvas is read back for recording.
+  return entry?.el?.video || entry?.card?.querySelector('.smooth30-canvas');
 }
 
 function drawRecordingFrame() {
@@ -298,7 +301,7 @@ function drawRecordingFrame() {
         } };
       });
   for (const item of entries) {
-    const source = focusEntry ? (focusPlayer.querySelector('.smooth30-canvas') || focusEntry.el?.video) : recordingSource(item.entry);
+    const source = focusEntry ? (focusEntry.el?.video || focusPlayer.querySelector('.smooth30-canvas')) : recordingSource(item.entry);
     if (!source || source.readyState < 2 || !source.videoWidth) continue;
     const x = Math.round(item.rect.left * width);
     const y = Math.round(item.rect.top * height);

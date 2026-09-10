@@ -211,7 +211,7 @@ ipcMain.handle('save-recording', async (_e, payload) => {
   const bytes = Buffer.from(payload.buffer);
   fs.writeFileSync(temp, bytes);
   try {
-    await runFfmpeg(['-y', '-i', temp, '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
+    await runFfmpeg(['-y', '-i', temp, '-an', '-vf', 'format=yuv420p', '-r', '30', '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'veryfast', '-movflags', '+faststart', output]);
   } finally {
     try { fs.unlinkSync(temp); } catch {}
   }
