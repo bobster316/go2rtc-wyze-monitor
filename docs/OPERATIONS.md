@@ -11,11 +11,13 @@
 | Close / Escape | Return to grid |
 | Reconnect | Rebuild one camera player |
 | Refresh | Rebuild grid players |
+| Record | Record the visible grid, or the focused camera, to a browser-downloadable WebM file |
 | Fullscreen | Ask browser to enter fullscreen |
 
 Quality and smoothing preferences are stored in the browser. A new server default
-does not override an existing saved browser choice. No configuration editor,
-recording service or audio controls are included.
+does not override an existing saved browser choice. Recordings are created in the
+browser and downloaded locally as WebM files; there is no server-side recording
+service or audio control.
 
 ## Pi commands
 

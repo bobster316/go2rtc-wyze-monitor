@@ -33,11 +33,17 @@ const diagnosticsButton = document.getElementById('diagnosticsButton');
 const diagnosticsView = document.getElementById('diagnosticsView');
 const diagnosticsRows = document.getElementById('diagnosticsRows');
 const smooth30Badge = document.getElementById('smooth30Badge');
+const recordToggle = document.getElementById('recordToggle');
 
 const players = new Map();
 let focusEntry = null;
 let smooth30Enabled = localStorage.getItem('smooth30') !== 'off';
 let renderGeneration = 0;
+let recorder = null;
+let recordingCanvas = null;
+let recordingFrame = 0;
+let recordingChunks = [];
+let recordingStartedAt = 0;
 
 function formatTimestamp(date = new Date()) {
   const d = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
@@ -266,6 +272,96 @@ function render() {
   startGridSmoothingAll();
 }
 
+function recordingSource(entry) {
+  return entry?.card?.querySelector('.smooth30-canvas') || entry?.el?.video;
+}
+
+function drawRecordingFrame() {
+  if (!recorder || !recordingCanvas) return;
+  const context = recordingCanvas.getContext('2d');
+  const width = recordingCanvas.width;
+  const height = recordingCanvas.height;
+  context.fillStyle = '#020304';
+  context.fillRect(0, 0, width, height);
+  const entries = focusEntry
+    ? [{ entry: focusEntry, rect: { left: 0, top: 0, width: 1, height: 1 } }]
+    : [...players.values()].map(entry => {
+        const rect = entry.card.getBoundingClientRect();
+        const gridRect = grid.getBoundingClientRect();
+        return { entry, rect: {
+          left: (rect.left - gridRect.left) / Math.max(1, gridRect.width),
+          top: (rect.top - gridRect.top) / Math.max(1, gridRect.height),
+          width: rect.width / Math.max(1, gridRect.width),
+          height: rect.height / Math.max(1, gridRect.height),
+        } };
+      });
+  for (const item of entries) {
+    const source = focusEntry ? (focusPlayer.querySelector('.smooth30-canvas') || focusEntry.el?.video) : recordingSource(item.entry);
+    if (!source || source.readyState < 2 || !source.videoWidth) continue;
+    const x = Math.round(item.rect.left * width);
+    const y = Math.round(item.rect.top * height);
+    const w = Math.round(item.rect.width * width);
+    const h = Math.round(item.rect.height * height);
+    context.drawImage(source, x, y, w, h);
+  }
+  recordingFrame = requestAnimationFrame(drawRecordingFrame);
+}
+
+function recordingMimeType() {
+  return ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    .find(type => MediaRecorder.isTypeSupported(type)) || '';
+}
+
+function stopRecording() {
+  if (!recorder) return;
+  recorder.stop();
+  cancelAnimationFrame(recordingFrame);
+  recordToggle.classList.remove('recording');
+  recordToggle.setAttribute('aria-pressed', 'false');
+  recordToggle.textContent = 'Record';
+}
+
+function startRecording() {
+  if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+    recordToggle.textContent = 'Recording unavailable';
+    setTimeout(() => { recordToggle.textContent = 'Record'; }, 2500);
+    return;
+  }
+  const mimeType = recordingMimeType();
+  if (!mimeType) {
+    recordToggle.textContent = 'Codec unavailable';
+    setTimeout(() => { recordToggle.textContent = 'Record'; }, 2500);
+    return;
+  }
+  recordingCanvas = document.createElement('canvas');
+  recordingCanvas.width = 1920;
+  recordingCanvas.height = 1080;
+  recordingChunks = [];
+  recordingStartedAt = new Date();
+  const stream = recordingCanvas.captureStream(30);
+  recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
+  recorder.onerror = () => { recordingChunks = []; recorder = null; recordToggle.textContent = 'Record'; };
+  recorder.onstop = () => {
+    const blob = new Blob(recordingChunks, { type: mimeType });
+    const stamp = recordingStartedAt.toISOString().replace(/[:.]/g, '-');
+    const scope = focusedCamera ? `-${focusedCamera.id}` : '-grid';
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `wyze-monitor${scope}-${stamp}.webm`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    recorder = null;
+    recordingCanvas = null;
+    recordingChunks = [];
+  };
+  recorder.start(1000);
+  recordToggle.classList.add('recording');
+  recordToggle.setAttribute('aria-pressed', 'true');
+  recordToggle.textContent = focusedCamera ? 'Stop camera recording' : 'Stop grid recording';
+  drawRecordingFrame();
+}
+
 cameraMenu.addEventListener('click', event => {
   const button = event.target.closest('button[data-camera-action]');
   if (!button) return;
@@ -451,6 +547,11 @@ document.getElementById('diagnosticsClose').addEventListener('click', () => {
   diagnosticsView.classList.add('hidden');
   diagnosticsView.setAttribute('aria-hidden', 'true');
 });
+recordToggle.addEventListener('click', () => {
+  if (recorder) stopRecording();
+  else startRecording();
+});
+window.addEventListener('beforeunload', () => { if (recorder) recorder.stop(); });
 
 init().catch(err => {
   grid.innerHTML = `<pre class="error">${String(err.stack || err)}</pre>`;
