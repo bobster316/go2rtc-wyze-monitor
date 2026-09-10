@@ -1,7 +1,8 @@
 # Raspberry Pi 4 quality example
 
 The [Wyze Monitor 1.2.0 GitHub release](https://github.com/bobster316/go2rtc-wyze-monitor/releases/tag/v1.2.0)
-includes a short MP4 captured from the four-camera dashboard running on the
+includes a [short MP4 quality example](https://github.com/bobster316/go2rtc-wyze-monitor/releases/download/v1.2.0/wyze-monitor-grid-2026-09-10T17-36-25-404Z.mp4)
+captured from the four-camera dashboard running on the
 Raspberry Pi 4 deployment.
 
 The example is a representative operator-view capture, not an original camera
