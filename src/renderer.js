@@ -34,6 +34,7 @@ const diagnosticsView = document.getElementById('diagnosticsView');
 const diagnosticsRows = document.getElementById('diagnosticsRows');
 const smooth30Badge = document.getElementById('smooth30Badge');
 const recordToggle = document.getElementById('recordToggle');
+const recordingDownload = document.getElementById('recordingDownload');
 
 const players = new Map();
 let focusEntry = null;
@@ -336,6 +337,7 @@ function startRecording() {
   recordingCanvas = document.createElement('canvas');
   recordingCanvas.width = 1920;
   recordingCanvas.height = 1080;
+  recordingDownload.classList.add('hidden');
   recordingChunks = [];
   recordingStartedAt = new Date();
   const stream = recordingCanvas.captureStream(30);
@@ -346,11 +348,10 @@ function startRecording() {
     const blob = new Blob(recordingChunks, { type: mimeType });
     const stamp = recordingStartedAt.toISOString().replace(/[:.]/g, '-');
     const scope = focusedCamera ? `-${focusedCamera.id}` : '-grid';
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `wyze-monitor${scope}-${stamp}.webm`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    if (recordingDownload.href && recordingDownload.href.startsWith('blob:')) URL.revokeObjectURL(recordingDownload.href);
+    recordingDownload.href = URL.createObjectURL(blob);
+    recordingDownload.download = `wyze-monitor${scope}-${stamp}.webm`;
+    recordingDownload.classList.remove('hidden');
     recorder = null;
     recordingCanvas = null;
     recordingChunks = [];

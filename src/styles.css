@@ -71,6 +71,8 @@ button:hover { background: #223145; }
 button.active { background: #de2d26; color: white; }
 .record-action.recording { border-color: #de2d26; background: #5f1714; color: #ffd9d5; }
 .record-action.recording::before { content: '● '; color: #ff6b62; }
+.recording-download { display: inline-flex; align-items: center; text-decoration: none; }
+.recording-download.hidden { display: none; }
 .action { border: 1px solid #344251; border-radius: 8px; }
 
 .grid {
