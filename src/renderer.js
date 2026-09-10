@@ -279,7 +279,7 @@ function recordingSource(entry) {
 
 function drawRecordingFrame() {
   if (!recorder || !recordingCanvas) return;
-  const context = recordingCanvas.getContext('2d');
+  const context = recordingCanvas.getContext('2d', { alpha: false });
   const width = recordingCanvas.width;
   const height = recordingCanvas.height;
   context.fillStyle = '#020304';
@@ -309,7 +309,7 @@ function drawRecordingFrame() {
 }
 
 function recordingMimeType() {
-  return ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+  return ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm']
     .find(type => MediaRecorder.isTypeSupported(type)) || '';
 }
 
