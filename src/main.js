@@ -173,10 +173,24 @@ function createWindow() {
     backgroundColor: '#070a0e',
     title: 'Wyze Monitor',
     autoHideMenuBar: true,
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      preload: path.join(__dirname, 'preload.js'),
+    },
   });
   mainWindow.maximize();
   mainWindow.loadURL(`http://127.0.0.1:${PORT}/`);
+}
+
+function runFfmpeg(args) {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn(appConfig?.ffmpeg || 'ffmpeg', args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+    let stderr = '';
+    ffmpeg.stderr.on('data', data => { stderr += data.toString(); });
+    ffmpeg.on('error', reject);
+    ffmpeg.on('close', code => code === 0 ? resolve() : reject(new Error(stderr.slice(-1200) || `FFmpeg exited with ${code}`)));
+  });
 }
 
 function fatal(message) {
@@ -187,6 +201,23 @@ function fatal(message) {
 }
 
 ipcMain.handle('open-external', async (_e, url) => shell.openExternal(url));
+ipcMain.handle('save-recording', async (_e, payload) => {
+  if (!payload || !payload.buffer) throw new Error('Recording data was empty.');
+  const downloads = path.join(app.getPath('downloads'), 'Wyze Monitor');
+  fs.mkdirSync(downloads, { recursive: true });
+  const safeName = String(payload.filename || 'wyze-monitor-recording.mp4').replace(/[^a-zA-Z0-9._-]/g, '_');
+  const output = path.join(downloads, safeName.endsWith('.mp4') ? safeName : `${safeName}.mp4`);
+  const temp = path.join(app.getPath('temp'), `wyze-monitor-${Date.now()}.webm`);
+  const bytes = Buffer.from(payload.buffer);
+  fs.writeFileSync(temp, bytes);
+  try {
+    await runFfmpeg(['-y', '-i', temp, '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', output]);
+  } finally {
+    try { fs.unlinkSync(temp); } catch {}
+  }
+  log(`saved recording ${output}`);
+  return { path: output };
+});
 
 app.whenReady().then(async () => {
   try {

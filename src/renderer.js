@@ -347,13 +347,31 @@ function startRecording() {
   recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
   recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
   recorder.onerror = () => { recordingChunks = []; recorder = null; recordToggle.textContent = 'Record'; };
-  recorder.onstop = () => {
+  recorder.onstop = async () => {
     const blob = new Blob(recordingChunks, { type: mimeType });
     const stamp = recordingStartedAt.toISOString().replace(/[:.]/g, '-');
     const scope = focusedCamera ? `-${focusedCamera.id}` : '-grid';
+    const filename = `wyze-monitor${scope}-${stamp}.mp4`;
+    if (window.electronAPI?.saveRecording) {
+      try {
+        recordToggle.textContent = 'Saving MP4…';
+        await window.electronAPI.saveRecording(await blob.arrayBuffer(), filename);
+        recordToggle.textContent = 'Saved MP4';
+        setTimeout(() => { recordToggle.textContent = 'Record'; }, 2200);
+      } catch (error) {
+        recordToggle.textContent = 'Save failed';
+        console.error('Native recording failed:', error);
+        setTimeout(() => { recordToggle.textContent = 'Record'; }, 3000);
+      }
+      recorder = null;
+      recordingTrack = null;
+      recordingCanvas = null;
+      recordingChunks = [];
+      return;
+    }
     if (recordingDownload.href && recordingDownload.href.startsWith('blob:')) URL.revokeObjectURL(recordingDownload.href);
     recordingDownload.href = URL.createObjectURL(blob);
-    recordingDownload.download = `wyze-monitor${scope}-${stamp}.webm`;
+    recordingDownload.download = filename.replace(/\.mp4$/, '.webm');
     recordingDownload.classList.remove('hidden');
     // Start the download immediately. Chrome may reject an asynchronous
     // download in some policies; the visible link remains as a fallback.
