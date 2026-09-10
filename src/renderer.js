@@ -352,6 +352,9 @@ function startRecording() {
     recordingDownload.href = URL.createObjectURL(blob);
     recordingDownload.download = `wyze-monitor${scope}-${stamp}.webm`;
     recordingDownload.classList.remove('hidden');
+    // Start the download immediately. Chrome may reject an asynchronous
+    // download in some policies; the visible link remains as a fallback.
+    setTimeout(() => recordingDownload.click(), 0);
     recorder = null;
     recordingCanvas = null;
     recordingChunks = [];
