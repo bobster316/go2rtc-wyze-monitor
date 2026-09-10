@@ -7,7 +7,7 @@ class VideoStream extends VideoRTC {
     this.video.controls = false;
     this.video.muted = true;
     this.video.autoplay = true;
-    this.video.style.objectFit = 'contain';
+    this.video.style.objectFit = 'cover';
     this.video.style.background = '#020304';
   }
 }
@@ -27,6 +27,8 @@ const focusDetails = document.getElementById('focusDetails');
 const focusTimestamp = document.getElementById('focusTimestamp');
 const focusFps = document.getElementById('focusFps');
 const smooth30Toggle = document.getElementById('smooth30Toggle');
+const cameraMenuButton = document.getElementById('cameraMenuButton');
+const cameraMenu = document.getElementById('cameraMenu');
 const smooth30Badge = document.getElementById('smooth30Badge');
 
 const players = new Map();
@@ -243,9 +245,29 @@ function render() {
     const entry = { camera, el, card, meter: newMeter(), smoother: null, smoothStats: null };
     players.set(camera.id, entry);
   });
+  cameraMenu.innerHTML = config.cameras.map(camera => `<div class="camera-menu-item" role="menuitem"><span><b>${camera.name}</b><small>${camera.ip}</small></span><button type="button" data-camera-action="enlarge" data-camera-id="${camera.id}">Enlarge</button><button type="button" data-camera-action="reconnect" data-camera-id="${camera.id}">Reconnect</button></div>`).join('');
   applyGridLayout();
   startGridSmoothingAll();
 }
+
+cameraMenu.addEventListener('click', event => {
+  const button = event.target.closest('button[data-camera-action]');
+  if (!button) return;
+  const camera = config.cameras.find(item => item.id === button.dataset.cameraId);
+  if (!camera) return;
+  if (button.dataset.cameraAction === 'enlarge') openFocus(camera);
+  else reconnectCamera(camera.id);
+});
+cameraMenuButton.addEventListener('click', () => {
+  const hidden = cameraMenu.classList.toggle('hidden');
+  cameraMenuButton.setAttribute('aria-expanded', String(!hidden));
+});
+document.addEventListener('click', event => {
+  if (!event.target.closest('.camera-menu-wrap')) {
+    cameraMenu.classList.add('hidden');
+    cameraMenuButton.setAttribute('aria-expanded', 'false');
+  }
+});
 
 function updateSmooth30Controls() {
   smooth30Toggle.classList.toggle('active', smooth30Enabled);

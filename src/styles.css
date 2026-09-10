@@ -19,49 +19,50 @@ body {
   overflow: hidden;
   background: #070a0e;
   display: grid;
-  grid-template-rows: 68px minmax(0, 1fr);
+  grid-template-rows: 40px minmax(0, 1fr);
 }
 
 .topbar {
-  min-height: 68px;
+  min-height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 4px 8px;
   border-bottom: 1px solid #26303b;
   background: #101820;
 }
 
-.brand { display: flex; align-items: center; gap: 12px; min-width: 220px; }
+.brand { display: flex; align-items: center; gap: 7px; min-width: 170px; }
 .mark {
-  width: 42px;
-  height: 42px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
   background: #de2d26;
   color: white;
   font-weight: 800;
-  border-radius: 8px;
+  border-radius: 6px;
   letter-spacing: 0;
 }
 
-h1 { margin: 0; font-size: 18px; font-weight: 650; }
-p { margin: 2px 0 0; color: #98a6b5; font-size: 12px; }
+h1 { margin: 0; font-size: 14px; font-weight: 650; }
+p { margin: 1px 0 0; color: #98a6b5; font-size: 9px; }
 
-.controls { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.controls { display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
 .segmented {
   display: flex;
   border: 1px solid #344251;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
 }
 button {
   border: 0;
   background: #182331;
   color: #dce6f1;
-  height: 34px;
-  padding: 0 12px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
   font: inherit;
   cursor: pointer;
   white-space: nowrap;
@@ -71,27 +72,77 @@ button.active { background: #de2d26; color: white; }
 .action { border: 1px solid #344251; border-radius: 8px; }
 
 .grid {
-  height: calc(100vh - 68px);
+  height: calc(100vh - 40px);
   display: grid;
   /* --cols and --rows are set from renderer.js to fit the camera count
      into the window with the least letterboxing. */
   grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
   grid-template-rows: repeat(var(--rows, 2), minmax(0, 1fr));
-  gap: 4px;
-  padding: 4px;
-  background: #020304;
+  gap: 1px;
+  padding: 0;
+  background: #26303b;
 }
 
 .camera-card {
   min-width: 0;
   min-height: 0;
+  position: relative;
   display: grid;
-  /* Frame takes the space that is left; the footer always keeps its own row,
-     so Enlarge/Reconnect survive dense grids. */
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   background: #0b1117;
-  border: 1px solid #1f2a35;
+  border: 0;
   overflow: hidden;
+}
+
+.camera-card footer {
+  position: absolute;
+  z-index: 4;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  min-height: 30px;
+  display: flex;
+  background: transparent;
+  pointer-events: none;
+}
+
+.camera-card footer { display: none; }
+.camera-menu-wrap { position: relative; }
+.camera-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 360px;
+  padding: 6px;
+  border: 1px solid #344251;
+  border-radius: 7px;
+  background: #101820;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+.camera-menu.hidden { display: none; }
+.camera-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border-bottom: 1px solid #26303b;
+}
+.camera-menu-item:last-child { border-bottom: 0; }
+.camera-menu-item span { flex: 1; min-width: 0; }
+.camera-menu-item b, .camera-menu-item small { display: block; }
+.camera-menu-item b { font-size: 11px; }
+.camera-menu-item small { color: #8fa0b1; font-size: 10px; }
+.camera-menu-item button { height: 24px; padding: 0 6px; font-size: 10px; border: 1px solid #344251; border-radius: 4px; }
+
+.camera-card footer strong,
+.camera-card footer span,
+.camera-card footer button { pointer-events: auto; }
+.camera-card footer strong,
+.camera-card footer span {
+  padding: 5px 7px;
+  border-radius: 5px;
+  background: rgba(16, 24, 32, 0.88);
 }
 
 .camera-frame {
@@ -114,7 +165,9 @@ button.active { background: #de2d26; color: white; }
   width: 100%;
   height: 100%;
   display: block;
-  object-fit: contain;
+  /* Fill the grid tile so the small aspect-ratio difference does not leave
+     a distracting black strip between the image and the card footer. */
+  object-fit: cover;
   background: #020304;
 }
 
@@ -151,23 +204,25 @@ button.active { background: #de2d26; color: white; }
 
 .metrics {
   right: 12px;
-  bottom: 12px;
+  /* Keep camera-burned timestamps at the bottom of the image unobstructed. */
+  top: 46px;
   display: grid;
   gap: 4px;
   justify-items: end;
-  padding: 6px 9px;
+  padding: 4px 6px;
+  border-radius: 4px;
 }
 
 .fps,
 .timestamp {
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1;
 }
 
 .camera-card footer {
-  display: flex;
+  display: none;
   min-height: 32px;
   align-items: center;
   gap: 8px;
@@ -215,12 +270,12 @@ button.active { background: #de2d26; color: white; }
 }
 .focus-metrics {
   right: 18px;
-  bottom: 18px;
-  padding: 8px 11px;
+  top: 18px;
+  padding: 5px 7px;
 }
 .focus-metrics .fps,
 .focus-metrics .timestamp {
-  font-size: 18px;
+  font-size: 13px;
 }
 .focus-toolbar button { border: 1px solid #344251; border-radius: 8px; }
 .focus-toolbar-actions {
@@ -246,7 +301,7 @@ button.active { background: #de2d26; color: white; }
   position: absolute;
   z-index: 3;
   left: 10px;
-  bottom: 10px;
+  bottom: 42px;
   margin: 0;
   pointer-events: none;
 }
@@ -300,8 +355,8 @@ button.active { background: #de2d26; color: white; }
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 38px;
-  padding: 0 12px;
+  height: 28px;
+  padding: 0 8px;
   border: 1px solid #2b3a49;
   border-radius: 8px;
   background: #0d151d;
@@ -309,7 +364,7 @@ button.active { background: #de2d26; color: white; }
 }
 
 .chip b {
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 700;
   color: #eaf1f8;
   font-variant-numeric: tabular-nums;
