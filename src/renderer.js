@@ -29,6 +29,9 @@ const focusFps = document.getElementById('focusFps');
 const smooth30Toggle = document.getElementById('smooth30Toggle');
 const cameraMenuButton = document.getElementById('cameraMenuButton');
 const cameraMenu = document.getElementById('cameraMenu');
+const diagnosticsButton = document.getElementById('diagnosticsButton');
+const diagnosticsView = document.getElementById('diagnosticsView');
+const diagnosticsRows = document.getElementById('diagnosticsRows');
 const smooth30Badge = document.getElementById('smooth30Badge');
 
 const players = new Map();
@@ -154,6 +157,19 @@ async function tick() {
 
   const dot = document.getElementById('liveDot');
   dot.className = 'dot ' + (live === total ? 'ok' : live === 0 ? 'bad' : 'warn');
+  if (!diagnosticsView.classList.contains('hidden')) updateDiagnostics();
+}
+
+function updateDiagnostics() {
+  diagnosticsRows.innerHTML = [...players.values()].map(entry => {
+    const m = entry.meter;
+    const video = entry.el.video;
+    const resolution = video?.videoWidth ? `${video.videoWidth}x${video.videoHeight}` : '--';
+    const output = entry.smoother?.running && entry.smoothStats ? entry.smoothStats.outputFps.toFixed(1) : '--';
+    const source = m.ready ? m.fps.toFixed(1) : '--';
+    const state = m.ready ? 'Live' : 'Connecting';
+    return `<tr><td>${entry.camera.name}</td><td class="state-${state.toLowerCase()}">${state}</td><td>${resolution}</td><td>${source} fps</td><td>${output} fps</td><td>${m.kbps ? `${(m.kbps / 1000).toFixed(2)} Mbps` : '--'}</td><td>${m.engine}</td></tr>`;
+  }).join('');
 }
 
 function setActiveQualityButtons() {
@@ -426,6 +442,15 @@ document.getElementById('focusClose').addEventListener('click', closeFocus);
 smooth30Toggle.addEventListener('click', () => setSmooth30(!smooth30Enabled));
 focusView.addEventListener('click', e => { if (e.target === focusView) closeFocus(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && focusedCamera) closeFocus(); });
+diagnosticsButton.addEventListener('click', () => {
+  diagnosticsView.classList.remove('hidden');
+  diagnosticsView.setAttribute('aria-hidden', 'false');
+  updateDiagnostics();
+});
+document.getElementById('diagnosticsClose').addEventListener('click', () => {
+  diagnosticsView.classList.add('hidden');
+  diagnosticsView.setAttribute('aria-hidden', 'true');
+});
 
 init().catch(err => {
   grid.innerHTML = `<pre class="error">${String(err.stack || err)}</pre>`;

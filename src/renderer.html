@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Wyze Monitor</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -32,6 +33,7 @@
         <button id="cameraMenuButton" class="action" type="button" aria-expanded="false">Cameras</button>
         <div id="cameraMenu" class="camera-menu hidden" role="menu"></div>
       </div>
+      <button id="diagnosticsButton" class="action" type="button">Diagnostics</button>
       <button id="refreshAll" class="action">Refresh</button>
       <button id="fullscreen" class="action">Fullscreen</button>
     </div>
@@ -77,6 +79,13 @@
         <div class="fps" id="focusFps">FPS --</div>
         <div class="timestamp focus-time" id="focusTimestamp"></div>
       </div>
+    </div>
+  </div>
+
+  <div class="diagnostics hidden" id="diagnosticsView" aria-hidden="true">
+    <div class="diagnostics-panel" role="dialog" aria-modal="true" aria-labelledby="diagnosticsTitle">
+      <div class="diagnostics-header"><strong id="diagnosticsTitle">Camera diagnostics</strong><button id="diagnosticsClose" type="button">Close</button></div>
+      <div class="diagnostics-table-wrap"><table><thead><tr><th>Camera</th><th>State</th><th>Resolution</th><th>Source</th><th>Output</th><th>Bitrate</th><th>Engine</th></tr></thead><tbody id="diagnosticsRows"></tbody></table></div>
     </div>
   </div>
 

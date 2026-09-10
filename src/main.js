@@ -119,6 +119,7 @@ function createServer() {
   const files = {
     '/': ['renderer.html', 'text/html'],
     '/styles.css': ['styles.css', 'text/css'],
+    '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
     '/renderer.js': ['renderer.js', 'application/javascript'],
     '/smooth30.js': ['smooth30.js', 'application/javascript'],
     '/vendor/video-rtc.js': ['vendor/video-rtc.js', 'application/javascript'],
