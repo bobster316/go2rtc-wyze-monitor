@@ -34,6 +34,7 @@ does not require Windows, Electron, or a pre-existing deployment.
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - camera, browser, network, Docker and installer problems.
 - [Architecture](docs/ARCHITECTURE.md) - stream path, shared code and process ownership.
 - [Performance and test status](docs/PERFORMANCE.md) - source FPS versus synthetic presentation and what has actually been tested.
+- [Raspberry Pi 4 quality example](docs/QUALITY-EXAMPLE.md) - downloadable MP4 showing the four-camera HD dashboard output.
 - [Pi compatibility matrix](raspberry-pi/COMPATIBILITY.md) - remaining certification work.
 - [Privacy and security](SECURITY.md) - credentials, logs and safe support reports.
 - [Contributing and release checks](CONTRIBUTING.md) - reproduce validation and build the Pi archive.
