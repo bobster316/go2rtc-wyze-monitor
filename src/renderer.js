@@ -43,6 +43,7 @@ let renderGeneration = 0;
 let recorder = null;
 let recordingCanvas = null;
 let recordingTimer = 0;
+let recordingTrack = null;
 let recordingChunks = [];
 let recordingStartedAt = 0;
 
@@ -305,6 +306,7 @@ function drawRecordingFrame() {
     const h = Math.round(item.rect.height * height);
     context.drawImage(source, x, y, w, h);
   }
+  if (recordingTrack?.requestFrame) recordingTrack.requestFrame();
   recordingTimer = setTimeout(drawRecordingFrame, 33);
 }
 
@@ -340,7 +342,8 @@ function startRecording() {
   recordingDownload.classList.add('hidden');
   recordingChunks = [];
   recordingStartedAt = new Date();
-  const stream = recordingCanvas.captureStream(30);
+  const stream = recordingCanvas.captureStream(0);
+  recordingTrack = stream.getVideoTracks()[0] || null;
   recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
   recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
   recorder.onerror = () => { recordingChunks = []; recorder = null; recordToggle.textContent = 'Record'; };
@@ -359,6 +362,7 @@ function startRecording() {
       recordingDownload.classList.add('hidden');
     }, 0);
     recorder = null;
+    recordingTrack = null;
     recordingCanvas = null;
     recordingChunks = [];
   };
