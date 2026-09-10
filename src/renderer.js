@@ -42,7 +42,7 @@ let smooth30Enabled = localStorage.getItem('smooth30') !== 'off';
 let renderGeneration = 0;
 let recorder = null;
 let recordingCanvas = null;
-let recordingFrame = 0;
+let recordingTimer = 0;
 let recordingChunks = [];
 let recordingStartedAt = 0;
 
@@ -305,7 +305,7 @@ function drawRecordingFrame() {
     const h = Math.round(item.rect.height * height);
     context.drawImage(source, x, y, w, h);
   }
-  recordingFrame = requestAnimationFrame(drawRecordingFrame);
+  recordingTimer = setTimeout(drawRecordingFrame, 33);
 }
 
 function recordingMimeType() {
@@ -316,7 +316,7 @@ function recordingMimeType() {
 function stopRecording() {
   if (!recorder) return;
   recorder.stop();
-  cancelAnimationFrame(recordingFrame);
+  clearTimeout(recordingTimer);
   recordToggle.classList.remove('recording');
   recordToggle.setAttribute('aria-pressed', 'false');
   recordToggle.textContent = 'Record';
