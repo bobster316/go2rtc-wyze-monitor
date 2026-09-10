@@ -315,6 +315,7 @@ button.active { background: #de2d26; color: white; }
   bottom: 42px;
   margin: 0;
   pointer-events: none;
+  display: none !important;
 }
 #smooth30Toggle.active {
   border-color: #e8a33d;
