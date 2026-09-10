@@ -75,7 +75,7 @@ Replace both usernames and passwords. The generator rejects `CHANGE_ME`.
 
 | Field | Default / meaning |
 |---|---|
-| `ffmpeg` | `ffmpeg` on PATH. Windows may use a forward-slash path without spaces, e.g. `C:/ffmpeg/bin/ffmpeg.exe`. Pi generation forces container FFmpeg. |
+| `ffmpeg` | `ffmpeg` on PATH. Windows uses this for both camera stream-copy producers and native Electron MP4 conversion. It may be a forward-slash path without spaces, e.g. `C:/ffmpeg/bin/ffmpeg.exe`. Pi generation forces container FFmpeg. |
 | `defaultQuality` | `main` (HD) or `sub` (Eco). Saved browser preference takes precedence. |
 | `port` | Camera port, default `322`. Global for all cameras. |
 | `tls` | `true` for RTSPS. Set `false` only if your camera provides plain RTSP, usually on 554. |
@@ -102,6 +102,10 @@ chmod 600 cameras.yaml
 
 Use `pi5` on a Pi 5. This regenerates private runtime configuration.
 On Windows, close the application and restart it after editing.
+
+The Windows Electron app saves native recordings under
+`%USERPROFILE%\Downloads\Wyze Monitor`. The browser viewer does not have access
+to this native save path and uses a WebM download fallback.
 
 ## 4. Pi server configuration
 

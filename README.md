@@ -1,8 +1,8 @@
 ﻿# Wyze Monitor - Windows and Raspberry Pi
 
 A local multi-camera dashboard for **Wyze Cam v4 cameras with RTSP-enabled firmware**.
-Run it as a Windows desktop application or as a Raspberry Pi 4 / Pi 5 server
-viewed from a browser on your LAN. Configure your own cameras; no Wyze account
+Use the Windows Electron desktop app as the primary viewer, or run the Raspberry
+Pi server and view it remotely in a browser on your LAN. Configure your own cameras; no Wyze account
 credentials or API keys are needed by this application.
 
 ![Wyze Monitor four-camera dashboard](assets/wyze-monitor-four-camera-hero.png)
@@ -17,14 +17,16 @@ Pi users can download the dedicated installer ZIP from
 |---|---|---|
 | Raspberry Pi 4 or Pi 5, Lite | Docker server on the Pi; browser on another device | [Pi installation](raspberry-pi/README.md) |
 | Raspberry Pi 4 or Pi 5, Desktop | Same server; local or remote browser | [Pi installation](raspberry-pi/README.md) |
-| Windows | Electron dashboard, FFmpeg and go2rtc on the PC | [Windows installation](docs/WINDOWS.md) |
+| Windows desktop (recommended) | Electron dashboard, native MP4 recording, FFmpeg and go2rtc on the PC | [Windows installation](docs/WINDOWS.md) |
+| Browser viewer | Remote dashboard served by the Pi; WebM browser recording fallback | [Pi installation](raspberry-pi/README.md) |
 
 One repository keeps the shared player and configuration consistent. The Pi installer
 does not require Windows, Electron, or a pre-existing deployment.
 
 ## Documentation
 
-- [Quick start](docs/QUICKSTART.md) - shortest path to a working dashboard.`r`n- [From-scratch setup](docs/FROM-SCRATCH.md) - complete beginner build and suggested YouTube chapter order.
+- [Quick start](docs/QUICKSTART.md) - shortest path to a working dashboard.
+- [From-scratch setup](docs/FROM-SCRATCH.md) - complete beginner build and suggested YouTube chapter order.
 - [Camera and application configuration](docs/CONFIGURATION.md) - firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
 - [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
 - [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
@@ -40,7 +42,9 @@ does not require Windows, Electron, or a pre-existing deployment.
 ## What it does
 
 Displays all configured cameras in an adaptive grid, with HD/Eco selection,
-per-camera reconnect, enlarged main-stream views and fullscreen monitoring.
+per-camera reconnect, enlarged main-stream views, fullscreen monitoring and
+diagnostics. The Electron app records the grid or focused camera as native MP4
+files in the Windows Downloads folder.
 Smooth30 optionally blends source frames in the viewing browser, with visible
 `SRC`, `OUT` and synthetic-frame labels. Full-resolution HD sources retain
 their 2560x1440 backing canvas. Eco is an explicit user choice.
@@ -52,8 +56,9 @@ Wyze RTSPS/H.264 -> FFmpeg stream copy -> go2rtc -> WebRTC -> browser decode
 ```
 
 The server does not transcode video. The application does not use Docker Wyze
-Bridge. Audio, recording, object detection and a camera-management web UI are
-not implemented.
+Bridge. Audio, object detection and a camera-management web UI are not
+implemented. Native MP4 recording is provided by the Electron app; browsers use
+their WebM recording fallback.
 
 ## Requirements and limits
 

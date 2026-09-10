@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 - 2026-09-10
+
+- Make the Windows Electron application the primary desktop viewer.
+- Add native MP4 recording for the visible grid or focused camera.
+- Save recordings automatically to `Downloads/Wyze Monitor` through FFmpeg.
+- Add a context-isolated preload bridge for the native recording save operation.
+- Keep the Raspberry Pi browser viewer as a supported remote option with WebM fallback.
+- Improve recording frame timing, opaque capture and constant-frame-rate conversion.
+- Document the desktop and browser workflows, recording locations and troubleshooting.
+
 ## 1.1.1 - 2026-09-09
 
 - Correct text encoding in public guides and installer documentation.

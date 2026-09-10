@@ -7,13 +7,16 @@ Camera RTSPS H.264
   -> FFmpeg exec producer: -an -c:v copy
   -> go2rtc internal RTSP
   -> WebRTC (MSE fallback)
-  -> browser H.264 decode
+  -> Electron or browser H.264 decode
   -> optional WebGL Smooth30 canvas
 ```
 
 FFmpeg demuxes and remuxes the camera video without decoding or re-encoding.
 The browser decodes the video; hardware acceleration depends on its platform.
-Audio is disabled. Recording and object detection are not implemented.
+Audio is disabled. The Electron viewer composites decoded video frames and sends
+the capture to its main process, where FFmpeg writes H.264 MP4. Remote browser
+viewers use a WebM fallback because browser MediaRecorder support for MP4 is not
+reliable.
 
 Direct go2rtc RTSPS connections failed with the cameras used for development.
 The shared generator retains explicit FFmpeg `exec:` sources with TCP transport
@@ -29,7 +32,8 @@ A second consumer can share an existing producer.
 | Path | Responsibility |
 |---|---|
 | scripts/generate-go2rtc-config.js | Validate cameras.yaml and generate stream-copy sources |
-| src/main.js | Windows Electron entrypoint, localhost HTTP and go2rtc supervision |
+| src/main.js | Windows Electron entrypoint, localhost HTTP, go2rtc supervision and native MP4 recording |
+| src/preload.js | Narrow context-isolated bridge for native recording saves |
 | src/renderer.js | Shared grid, focus view, quality, reconnect and telemetry |
 | src/smooth30.js | WebGL temporal blending and output scheduler |
 | src/vendor/video-rtc.js | Upstream go2rtc browser player |

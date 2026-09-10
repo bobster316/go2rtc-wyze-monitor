@@ -52,7 +52,7 @@ chmod +x raspberry-pi/*.sh raspberry-pi/wyze-monitor
 Never extract an upgrade over your only working installation.
 [Full Pi guide](../raspberry-pi/README.md).
 
-## Windows
+## Windows standalone app (recommended)
 
 Install Node.js 22 LTS, Git and FFmpeg, and reopen PowerShell so PATH updates apply.
 Then:
@@ -71,6 +71,9 @@ with your own cameras and credentials, save, then run:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\setup.ps1
 npm start
 ```
+
+The Electron window is the primary Windows viewer. It records the grid or a
+focused camera as MP4 files under `%USERPROFILE%\Downloads\Wyze Monitor`.
 
 [Full Windows guide](WINDOWS.md).
 

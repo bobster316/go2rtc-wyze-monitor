@@ -62,7 +62,7 @@ sudo apt-get update
 sudo apt-get install -y git ca-certificates curl
 git clone https://github.com/bobster316/go2rtc-wyze-monitor.git
 cd go2rtc-wyze-monitor
-git checkout v1.1.1
+git checkout v1.2.0
 chmod +x raspberry-pi/*.sh raspberry-pi/wyze-monitor
 ./raspberry-pi/install.sh --dry-run
 ./raspberry-pi/install.sh

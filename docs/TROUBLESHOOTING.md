@@ -6,6 +6,7 @@
 2. Server: go2rtc and monitor-web available.
 3. Signalling/media: WebSocket and WebRTC connectivity.
 4. Viewer: changing frames, correct quality, GPU capacity and Smooth30 state.
+   Prefer the Windows Electron viewer when you need native MP4 recording.
 
 A health response is not an end-to-end camera test.
 
@@ -62,8 +63,10 @@ Verify camera addresses and credentials. Ensure the viewer can reach the Pi's
 WebRTC TCP/UDP port (default 18555); the ICE candidate must contain the current
 Pi address. Refresh the page after redeploying.
 
-Disable Smooth30 to isolate GPU presentation problems.
-Try a current desktop Chrome/Chromium browser and inspect GPU acceleration.
+Disable Smooth30 to isolate GPU presentation problems. On Windows, try the
+standalone Electron viewer first; it uses the same local stream path without
+Chrome download restrictions. For remote Pi viewing, use a current desktop
+Chrome/Chromium browser and inspect GPU acceleration.
 MSE may be used as fallback; a working HTTP page alone does not prove WebRTC works.
 
 ## One tile is offline
@@ -111,6 +114,14 @@ Local health check while the app runs:
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8765/api/health
 ```
+
+## Windows: recording problems
+
+The Electron viewer converts recordings to H.264 MP4 with FFmpeg and saves them
+under `%USERPROFILE%\Downloads\Wyze Monitor`. Check `ffmpeg -version` and make
+sure that folder is writable. A browser viewer cannot reliably encode MP4; its
+WebM fallback is intended for remote viewing only. Do not rename a WebM file to
+`.mp4`, because the container and codec remain WebM.
 
 ## Useful Pi diagnostics
 
