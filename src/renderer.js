@@ -354,7 +354,10 @@ function startRecording() {
     recordingDownload.classList.remove('hidden');
     // Start the download immediately. Chrome may reject an asynchronous
     // download in some policies; the visible link remains as a fallback.
-    setTimeout(() => recordingDownload.click(), 0);
+    setTimeout(() => {
+      recordingDownload.click();
+      recordingDownload.classList.add('hidden');
+    }, 0);
     recorder = null;
     recordingCanvas = null;
     recordingChunks = [];
