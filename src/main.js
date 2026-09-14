@@ -8,7 +8,8 @@ const { spawn } = require('child_process');
 
 const { generate, GO2RTC_DIR, ROOT } = require('../scripts/generate-go2rtc-config');
 
-const PORT = 8765;
+let PORT = 8765;
+const PORT_CANDIDATES = [8765, 8766, 8767, 8768];
 const GO2RTC_BIN = path.join(GO2RTC_DIR, process.platform === 'win32' ? 'go2rtc.exe' : 'go2rtc');
 const GO2RTC_CONFIG = path.join(GO2RTC_DIR, 'go2rtc.yaml');
 const GO2RTC_API = 'http://127.0.0.1:1984';
@@ -161,7 +162,35 @@ function createServer() {
     res.end('Not found');
   });
 
-  return new Promise(resolve => next.listen(PORT, '127.0.0.1', () => resolve(next)));
+  return new Promise((resolve, reject) => {
+    const tryListen = i => {
+      if (i >= PORT_CANDIDATES.length) {
+        reject(new Error(
+          `Could not start the local dashboard server: every candidate port is already in use ` +
+          `(${PORT_CANDIDATES.join(', ')}). Another application on this PC has taken them. ` +
+          `Close it, or free one of these ports, then restart Wyze Monitor.`
+        ));
+        return;
+      }
+      const port = PORT_CANDIDATES[i];
+      const onError = err => {
+        next.removeListener('error', onError);
+        if (err.code === 'EADDRINUSE') {
+          log(`port ${port} is already in use, trying the next candidate`);
+          tryListen(i + 1);
+        } else {
+          reject(err);
+        }
+      };
+      next.once('error', onError);
+      next.listen(port, '127.0.0.1', () => {
+        next.removeListener('error', onError);
+        PORT = port;
+        resolve(next);
+      });
+    };
+    tryListen(0);
+  });
 }
 
 function createWindow() {
@@ -230,7 +259,11 @@ app.whenReady().then(async () => {
   }
 
   await startGo2rtc();
-  server = await createServer();
+  try {
+    server = await createServer();
+  } catch (err) {
+    return fatal(err.message);
+  }
   createWindow();
 });
 
