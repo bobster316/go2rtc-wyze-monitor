@@ -18,7 +18,7 @@ Pi users can download the dedicated installer ZIP from
 | Raspberry Pi 4 or Pi 5, Lite | Docker server on the Pi; browser on another device | [Pi installation](raspberry-pi/README.md) |
 | Raspberry Pi 4 or Pi 5, Desktop | Same server; local or remote browser | [Pi installation](raspberry-pi/README.md) |
 | Windows desktop (recommended) | Electron dashboard, native MP4 recording, FFmpeg and go2rtc on the PC | [Windows installation](docs/WINDOWS.md) |
-| Browser viewer | Remote dashboard served by the Pi; WebM browser recording fallback | [Pi installation](raspberry-pi/README.md) |
+| Browser viewer | Shared dashboard and MP4 downloads, with Pi conversion where needed | [Pi installation](raspberry-pi/README.md) |
 
 One repository keeps the shared player and configuration consistent. The Pi installer
 does not require Windows, Electron, or a pre-existing deployment.
@@ -30,6 +30,7 @@ does not require Windows, Electron, or a pre-existing deployment.
 - [Camera and application configuration](docs/CONFIGURATION.md) - firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
 - [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
 - [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
+- [Platform features and recording](docs/PLATFORM-FEATURES.md) - Windows/Pi parity and browser download behaviour.
 - [Operation, backup, recovery and removal](docs/OPERATIONS.md) - recreate your installation and maintain it.
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - camera, browser, network, Docker and installer problems.
 - [Architecture](docs/ARCHITECTURE.md) - stream path, shared code and process ownership.
@@ -56,10 +57,12 @@ Wyze RTSPS/H.264 -> FFmpeg stream copy -> go2rtc -> WebRTC -> browser decode
                                                optional GPU Smooth30
 ```
 
-The server does not transcode video. The application does not use Docker Wyze
+Live camera forwarding does not transcode video. The application does not use Docker Wyze
 Bridge. Audio, object detection and a camera-management web UI are not
-implemented. Native MP4 recording is provided by the Electron app; browsers use
-their WebM recording fallback.
+implemented. Both viewers record only the camera images. Windows saves MP4 through
+Electron; Pi browser viewers save MP4 directly when supported, or convert a WebM
+capture on the Pi after recording stops. A WebM backup is retained if conversion
+fails. See [recording limits and download behaviour](docs/PLATFORM-FEATURES.md).
 
 ## Requirements and limits
 

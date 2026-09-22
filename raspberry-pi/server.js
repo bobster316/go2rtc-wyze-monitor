@@ -5,6 +5,8 @@ const http = require('http');
 const net = require('net');
 const path = require('path');
 const { loadConfig } = require('../scripts/generate-go2rtc-config');
+const { createRecordingHandler, MAX_BYTES } = require('./recordings');
+const handleRecording = createRecordingHandler();
 
 const PORT = Number(process.env.PORT || 8765);
 const UPSTREAM_HOST = process.env.GO2RTC_HOST || 'go2rtc';
@@ -58,6 +60,14 @@ function getStreams() {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  if (url.pathname === '/api/recordings') return handleRecording(req, res);
+  // Shared viewer diagnostics remain local to the browser on the Pi deployment.
+  if (url.pathname === '/api/playback' && req.method === 'POST') {
+    req.resume();
+    res.writeHead(204);
+    res.end();
+    return;
+  }
   if (files[url.pathname]) {
     const [relative, type] = files[url.pathname];
     fs.readFile(path.join(SRC, relative), (err, content) => {
@@ -80,6 +90,7 @@ const server = http.createServer(async (req, res) => {
       defaultQuality,
       go2rtcWs: `${wsProtocol}://${req.headers.host}/api/ws`,
       platform: process.arch,
+      recording: { mp4: true, maxBytes: MAX_BYTES },
     });
     return;
   }

@@ -15,8 +15,10 @@ FFmpeg demuxes and remuxes the camera video without decoding or re-encoding.
 The browser decodes the video; hardware acceleration depends on its platform.
 Audio is disabled. The Electron viewer composites decoded video frames and sends
 the capture to its main process, where FFmpeg writes H.264 MP4. Remote browser
-viewers use a WebM fallback because browser MediaRecorder support for MP4 is not
-reliable.
+viewers save MP4 directly when their MediaRecorder supports H.264 MP4. Otherwise
+the Pi web service converts the finished WebM capture to MP4 using a bounded,
+single-job FFmpeg worker. This conversion is separate from live stream forwarding.
+See [recording behaviour and limits](PLATFORM-FEATURES.md).
 
 Direct go2rtc RTSPS connections failed with the cameras used for development.
 The shared generator retains explicit FFmpeg `exec:` sources with TCP transport

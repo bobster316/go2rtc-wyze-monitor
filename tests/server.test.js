@@ -26,7 +26,7 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
     fs.rmSync(fixture, { recursive: true, force: true });
   });
   for (const dir of ['scripts', 'raspberry-pi', 'src']) fs.mkdirSync(path.join(fixture, dir));
-  for (const file of ['scripts/generate-go2rtc-config.js', 'raspberry-pi/server.js']) {
+  for (const file of ['scripts/generate-go2rtc-config.js', 'raspberry-pi/server.js', 'raspberry-pi/recordings.js']) {
     fs.copyFileSync(path.join(root, file), path.join(fixture, file));
   }
   fs.writeFileSync(path.join(fixture, 'src/renderer.html'), '<!doctype html><title>Dummy test</title>');
@@ -64,6 +64,7 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
   assert.ok(!configText.includes('PRIVATE_TEST_USER'));
   const config = JSON.parse(configText);
   assert.equal(config.defaultQuality, 'main');
+  assert.equal(config.recording.mp4, true);
   assert.equal(config.go2rtcWs, 'ws://127.0.0.1:' + port + '/api/ws');
   assert.deepEqual(Object.keys(config.cameras[0]).sort(), ['id', 'ip', 'name']);
   const healthResponse = await fetch(base + '/api/health');

@@ -2,6 +2,20 @@ import { VideoRTC } from '/vendor/video-rtc.js';
 import { FullResolutionCadence30 } from '/smooth30.js';
 
 class VideoStream extends VideoRTC {
+  async createOffer(pc) {
+    const offer = await super.createOffer(pc);
+    for (const { receiver } of pc.getTransceivers()) {
+      if (receiver.track?.kind !== 'video') continue;
+      if ('jitterBufferTarget' in receiver) {
+        receiver.jitterBufferTarget = 1000;
+      } else {
+        console.warn('This browser cannot request the Wyze playback buffer.');
+      }
+    }
+    return offer;
+  }
+
+
   oninit() {
     super.oninit();
     this.video.controls = false;
@@ -38,7 +52,7 @@ const recordingDownload = document.getElementById('recordingDownload');
 
 const players = new Map();
 let focusEntry = null;
-let smooth30Enabled = localStorage.getItem('smooth30') !== 'off';
+let smooth30Enabled = localStorage.getItem('smooth30') === 'on';
 let renderGeneration = 0;
 let recorder = null;
 let recordingCanvas = null;
@@ -46,6 +60,7 @@ let recordingTimer = 0;
 let recordingTrack = null;
 let recordingChunks = [];
 let recordingStartedAt = 0;
+let recordingBytes = 0;
 
 function formatTimestamp(date = new Date()) {
   const d = new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
@@ -82,7 +97,7 @@ async function sampleMeter(el, meter) {
   if (!video) return;
 
   const q = video.getVideoPlaybackQuality ? video.getVideoPlaybackQuality() : null;
-  const frames = q ? q.totalVideoFrames : 0;
+  const frames = q ? Math.max(0, q.totalVideoFrames - q.droppedVideoFrames) : 0;
   const now = performance.now();
   const dt = (now - meter.lastTime) / 1000;
   if (dt > 0.2 && frames >= meter.lastFrames) {
@@ -97,7 +112,18 @@ async function sampleMeter(el, meter) {
     try {
       const stats = await el.pc.getStats();
       let bytes = 0;
-      stats.forEach(r => { if (r.type === 'inbound-rtp' && r.kind === 'video') bytes += r.bytesReceived || 0; });
+      stats.forEach(r => {
+        if (r.type !== 'inbound-rtp' || r.kind !== 'video') return;
+        bytes += r.bytesReceived || 0;
+        meter.playback = Object.fromEntries([
+          'framesDecoded', 'framesDropped', 'freezeCount', 'totalFreezesDuration',
+          'packetsLost', 'jitter', 'jitterBufferDelay', 'jitterBufferTargetDelay',
+          'jitterBufferEmittedCount', 'frameWidth', 'frameHeight', 'framesPerSecond',
+        ].filter(key => typeof r[key] === 'number').map(key => [key, r[key]]));
+        meter.playback.decoder = r.decoderImplementation || 'unknown';
+        meter.playback.bufferTargetMs = el.pc.getReceivers()
+          .find(receiver => receiver.track?.kind === 'video')?.jitterBufferTarget ?? null;
+      });
       if (bytes && meter.lastBytes && dt > 0.2) meter.kbps = ((bytes - meter.lastBytes) * 8) / dt / 1000;
       meter.lastBytes = bytes;
     } catch (err) { /* stats unavailable this tick */ }
@@ -122,10 +148,11 @@ async function tick() {
   let engine = '--';
   let gridRes = '--';
 
-  for (const entry of players.values()) {
+  const activeEntries = focusEntry ? [focusEntry] : [...players.values()];
+  for (const entry of activeEntries) {
     await sampleMeter(entry.el, entry.meter);
     const m = entry.meter;
-    const fpsEl = entry.card.querySelector('[data-fps]');
+    const fpsEl = entry.card?.querySelector('[data-fps]');
     if (m.ready) {
       live += 1;
       const outputFps = entry.smoother?.running && entry.smoothStats
@@ -139,24 +166,23 @@ async function tick() {
         : `SRC ${m.fps.toFixed(1)} FPS`;
       const vw = entry.el.video ? entry.el.video.videoWidth : 0;
       const vh = entry.el.video ? entry.el.video.videoHeight : 0;
-      setStatus(entry.card, vw ? `${vw}x${vh}` : config.qualities[quality].label);
+      if (entry.card) setStatus(entry.card, vw ? `${vw}x${vh}` : config.qualities[quality].label);
       if (vw) gridRes = `${vw}x${vh}`;
-      entry.card.classList.remove('offline');
+      entry.card?.classList.remove('offline');
     } else {
       if (fpsEl) fpsEl.textContent = 'FPS --';
-      setStatus(entry.card, 'Connecting');
-      entry.card.classList.add('offline');
+      if (entry.card) setStatus(entry.card, 'Connecting');
+      entry.card?.classList.add('offline');
     }
   }
 
   if (focusEntry) {
-    await sampleMeter(focusEntry.el, focusEntry.meter);
     if (!focusEntry.smoother || !focusEntry.smoother.running) {
       focusFps.textContent = focusEntry.meter.ready ? `SRC ${focusEntry.meter.fps.toFixed(1)} FPS` : 'FPS --';
     }
   }
 
-  const total = players.size;
+  const total = activeEntries.length;
   document.getElementById('liveText').textContent = `${live}/${total}`;
   document.getElementById('fpsText').textContent = live ? (outputFpsSum / live).toFixed(1) : '--';
   document.getElementById('mbpsText').textContent = kbpsSum ? (kbpsSum / 1000).toFixed(2) : '--';
@@ -165,6 +191,13 @@ async function tick() {
 
   const dot = document.getElementById('liveDot');
   dot.className = 'dot ' + (live === total ? 'ok' : live === 0 ? 'bad' : 'warn');
+  fetch('/api/playback', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(activeEntries.map(entry => ({
+      camera: entry.camera.id, ...entry.meter.playback,
+      displayedFps: entry.meter.fps, ready: entry.meter.ready,
+    }))),
+  }).catch(() => {});
   if (!diagnosticsView.classList.contains('hidden')) updateDiagnostics();
 }
 
@@ -214,6 +247,7 @@ function reconnectCamera(cameraId) {
   stopSmoother(entry);
   setStatus(entry.card, 'Connecting');
   entry.meter = newMeter();
+  disposePlayer(entry.el);
   entry.el = makePlayer(entry.card.querySelector('[data-player]'), cameraId, quality);
   if (smooth30Enabled && !focusEntry) startGridSmoothing(entry);
 }
@@ -249,9 +283,19 @@ function applyGridLayout() {
   grid.style.setProperty('--count', count);
 }
 
+function disposePlayer(el) {
+  if (!el) return;
+  el.remove();
+  if (el.disconnectTID) clearTimeout(el.disconnectTID);
+  if (el.reconnectTID) clearTimeout(el.reconnectTID);
+  el.disconnectTID = 0;
+  el.reconnectTID = 0;
+  el.ondisconnect();
+}
+
 function render() {
   renderGeneration += 1;
-  for (const entry of players.values()) stopSmoother(entry);
+  for (const entry of players.values()) { stopSmoother(entry); disposePlayer(entry.el); }
   players.clear();
   grid.innerHTML = '';
   config.cameras.forEach(camera => {
@@ -314,20 +358,54 @@ function drawRecordingFrame() {
 }
 
 function recordingMimeType() {
-  return ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm']
+  const types = ['video/webm;codecs=vp8', 'video/webm;codecs=vp9', 'video/webm'];
+  if (!window.electronAPI?.saveRecording) types.unshift('video/mp4;codecs=avc1.42001E');
+  return types
     .find(type => MediaRecorder.isTypeSupported(type)) || '';
 }
 
+function offerRecordingDownload(blob, filename) {
+  if (recordingDownload.href?.startsWith('blob:')) URL.revokeObjectURL(recordingDownload.href);
+  recordingDownload.href = URL.createObjectURL(blob);
+  recordingDownload.download = filename;
+  recordingDownload.classList.remove('hidden');
+  recordingDownload.click();
+  // Keep the link available if the browser blocks the automatic download.
+}
+
+async function saveBrowserRecording(blob, filename) {
+  if (blob.type.startsWith('video/mp4')) {
+    offerRecordingDownload(blob, filename);
+    return;
+  }
+  if (!config.recording?.mp4) {
+    offerRecordingDownload(blob, filename.replace(/\.mp4$/, '.webm'));
+    return;
+  }
+  try {
+    if (blob.size > config.recording.maxBytes) throw new Error('Recording exceeds the MP4 conversion limit.');
+    const response = await fetch('/api/recordings', { method: 'POST', headers: { 'Content-Type': blob.type }, body: blob });
+    if (!response.ok) throw new Error((await response.json()).error || 'MP4 conversion failed.');
+    offerRecordingDownload(await response.blob(), filename);
+  } catch (error) {
+    // Preserve a downloadable copy even if the Pi is busy or conversion fails.
+    offerRecordingDownload(blob, filename.replace(/\.mp4$/, '.webm'));
+    throw error;
+  }
+}
+
 function stopRecording() {
-  if (!recorder) return;
+  if (!recorder || recorder.state !== 'recording') return;
   recorder.stop();
   clearTimeout(recordingTimer);
   recordToggle.classList.remove('recording');
   recordToggle.setAttribute('aria-pressed', 'false');
-  recordToggle.textContent = 'Record';
+  recordToggle.disabled = true;
+  recordToggle.textContent = 'Saving recording…';
 }
 
 function startRecording() {
+  if (recorder || recordToggle.disabled) return;
   if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
     recordToggle.textContent = 'Recording unavailable';
     setTimeout(() => { recordToggle.textContent = 'Record'; }, 2500);
@@ -344,48 +422,47 @@ function startRecording() {
   recordingCanvas.height = 1080;
   recordingDownload.classList.add('hidden');
   recordingChunks = [];
+  recordingBytes = 0;
   recordingStartedAt = new Date();
   const stream = recordingCanvas.captureStream(0);
   recordingTrack = stream.getVideoTracks()[0] || null;
   recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
-  recorder.ondataavailable = event => { if (event.data.size) recordingChunks.push(event.data); };
+  recorder.ondataavailable = event => {
+    if (!event.data.size) return;
+    recordingChunks.push(event.data);
+    recordingBytes += event.data.size;
+    if (!window.electronAPI?.saveRecording && !mimeType.startsWith('video/mp4') &&
+        config.recording?.maxBytes && recordingBytes > config.recording.maxBytes - 8 * 1024 * 1024) stopRecording();
+  };
   recorder.onerror = () => { recordingChunks = []; recorder = null; recordToggle.textContent = 'Record'; };
   recorder.onstop = async () => {
     const blob = new Blob(recordingChunks, { type: mimeType });
     const stamp = recordingStartedAt.toISOString().replace(/[:.]/g, '-');
     const scope = focusedCamera ? `-${focusedCamera.id}` : '-grid';
     const filename = `wyze-monitor${scope}-${stamp}.mp4`;
-    if (window.electronAPI?.saveRecording) {
-      try {
+    try {
+      recordToggle.textContent = 'Saving MP4…';
+      if (window.electronAPI?.saveRecording) {
         recordToggle.textContent = 'Saving MP4…';
         await window.electronAPI.saveRecording(await blob.arrayBuffer(), filename);
         recordToggle.textContent = 'Saved MP4';
-        setTimeout(() => { recordToggle.textContent = 'Record'; }, 2200);
-      } catch (error) {
-        recordToggle.textContent = 'Save failed';
-        console.error('Native recording failed:', error);
-        setTimeout(() => { recordToggle.textContent = 'Record'; }, 3000);
+      } else {
+        await saveBrowserRecording(blob, filename);
+        recordToggle.textContent = 'Recording ready';
       }
+    } catch (error) {
+      recordToggle.textContent = window.electronAPI?.saveRecording ? 'Save failed' : 'WebM backup ready';
+      recordToggle.title = error.message;
+      console.error('Recording save failed:', error);
+    } finally {
+      stream.getTracks().forEach(track => track.stop());
       recorder = null;
       recordingTrack = null;
       recordingCanvas = null;
       recordingChunks = [];
-      return;
+      recordToggle.disabled = false;
+      setTimeout(() => { if (!recorder) recordToggle.textContent = 'Record'; }, 3000);
     }
-    if (recordingDownload.href && recordingDownload.href.startsWith('blob:')) URL.revokeObjectURL(recordingDownload.href);
-    recordingDownload.href = URL.createObjectURL(blob);
-    recordingDownload.download = filename.replace(/\.mp4$/, '.webm');
-    recordingDownload.classList.remove('hidden');
-    // Start the download immediately. Chrome may reject an asynchronous
-    // download in some policies; the visible link remains as a fallback.
-    setTimeout(() => {
-      recordingDownload.click();
-      recordingDownload.classList.add('hidden');
-    }, 0);
-    recorder = null;
-    recordingTrack = null;
-    recordingCanvas = null;
-    recordingChunks = [];
   };
   recorder.start(1000);
   recordToggle.classList.add('recording');
@@ -519,7 +596,11 @@ function setSmooth30(enabled) {
 }
 
 function openFocus(camera) {
+  renderGeneration += 1;
   stopGridSmoothingAll();
+  for (const entry of players.values()) disposePlayer(entry.el);
+  players.clear();
+  if (focusEntry) { stopSmoother(focusEntry); disposePlayer(focusEntry.el); }
   focusedCamera = camera;
   focusName.textContent = camera.name;
   focusDetails.textContent = `${camera.ip} / full resolution`;
@@ -528,7 +609,7 @@ function openFocus(camera) {
   focusView.classList.remove('hidden');
   focusView.setAttribute('aria-hidden', 'false');
   const el = makePlayer(focusPlayer, camera.id, 'main');
-  focusEntry = { el, meter: newMeter(), smoother: null };
+  focusEntry = { camera, el, meter: newMeter(), smoother: null };
   updateSmooth30Controls();
   if (smooth30Enabled) startFocusSmoothing();
 }
@@ -536,11 +617,12 @@ function openFocus(camera) {
 function closeFocus() {
   focusedCamera = null;
   if (focusEntry?.smoother) stopSmoother(focusEntry);
+  if (focusEntry) disposePlayer(focusEntry.el);
   focusEntry = null;
   focusPlayer.innerHTML = '';
   focusView.classList.add('hidden');
   focusView.setAttribute('aria-hidden', 'true');
-  startGridSmoothingAll();
+  render();
 }
 
 async function init() {

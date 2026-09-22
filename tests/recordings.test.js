@@ -1,0 +1,45 @@
+'use strict';
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const http = require('node:http');
+const { once } = require('node:events');
+const { spawnSync } = require('node:child_process');
+const { createRecordingHandler } = require('../raspberry-pi/recordings');
+
+test('Pi recording API validates uploads, creates a real MP4, and cleans temporary clips', {timeout:30000}, async t=>{
+  const root = fs.mkdtempSync(path.join(os.tmpdir(),'wyze-record-test-'));
+  const clips = path.join(root,'clips');
+  const handler = createRecordingHandler({directory:clips,maxBytes:2*1024*1024});
+  const server = http.createServer(handler);
+  server.listen(0,'127.0.0.1');
+  await once(server,'listening');
+  t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));fs.rmSync(root,{recursive:true,force:true});});
+  const url=`http://127.0.0.1:${server.address().port}`;
+  assert.equal((await fetch(url)).status,405);
+  assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'video/webm',Origin:'http://elsewhere.invalid'},body:'bad'})).status,403);
+  assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain'},body:'bad'})).status,415);
+  assert.equal((await fetch(url,{method:'POST',headers:{'Content-Type':'video/webm'},body:Buffer.alloc(2*1024*1024+1)})).status,413);
+  const available=spawnSync('ffmpeg',['-version'],{windowsHide:true});
+  if(available.status!==0) {t.diagnostic('FFmpeg not available: codec integration part skipped.');return;}
+  const source=path.join(root,'source.webm');
+  const generated=spawnSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=size=320x180:rate=20','-t','0.6','-an','-c:v','libvpx','-threads','1',source],{windowsHide:true});
+  assert.equal(generated.status,0,String(generated.stderr));
+  const response=await fetch(url,{method:'POST',headers:{'Content-Type':'video/webm'},body:fs.readFileSync(source)});
+  assert.equal(response.status,200,await (response.status===200?Promise.resolve(''):response.text()));
+  assert.equal(response.headers.get('content-type'),'video/mp4');
+  const bytes=Buffer.from(await response.arrayBuffer());
+  assert.equal(bytes.subarray(4,8).toString(),'ftyp');
+  const output=path.join(root,'result.mp4');fs.writeFileSync(output,bytes);
+  const probe=spawnSync('ffprobe',['-v','error','-show_entries','stream=codec_name,width,height,r_frame_rate','-of','json',output],{windowsHide:true});
+  assert.equal(probe.status,0,String(probe.stderr));
+  const stream=JSON.parse(probe.stdout).streams[0];
+  assert.equal(stream.codec_name,'h264');assert.equal(stream.r_frame_rate,'30/1');
+  assert.equal(stream.width,320);assert.equal(stream.height,180);
+  for(let i=0;i<20&&fs.readdirSync(clips).length;i++)await new Promise(r=>setTimeout(r,25));
+  assert.deepEqual(fs.readdirSync(clips),[]);
+  const invalid=await fetch(url,{method:'POST',headers:{'Content-Type':'video/webm'},body:'not a video'});
+  assert.equal(invalid.status,422);await invalid.text();
+});

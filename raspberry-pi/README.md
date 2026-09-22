@@ -1,5 +1,10 @@
 # Raspberry Pi 4 and Pi 5 installation
 
+The Pi dashboard shares Windows camera controls, diagnostics and camera-only
+recording. MP4 downloads use browser encoding when supported, otherwise conversion
+inside the web container. See [platform features](../docs/PLATFORM-FEATURES.md)
+for download behaviour and conversion limits.
+
 ## What you need
 
 - Raspberry Pi 4 or Pi 5, suitable power supply, cooling and reliable storage.

@@ -28,6 +28,7 @@ let go2rtc = null;
 let go2rtcRestarts = 0;
 let shuttingDown = false;
 let appConfig = null;
+let playbackReport = { updatedAt: null, cameras: [] };
 
 function log(...args) { console.log('[monitor]', ...args); }
 
@@ -128,6 +129,40 @@ function createServer() {
 
   const next = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
+
+    // Local numeric diagnostics only: no camera images, URLs or credentials.
+    if (url.pathname === '/api/playback' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(playbackReport));
+      return;
+    }
+    if (url.pathname === '/api/playback' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => {
+        body += chunk;
+        if (body.length > 16384) req.destroy();
+      });
+      req.on('end', () => {
+        try {
+          const report = JSON.parse(body);
+          if (!Array.isArray(report) || report.length > appConfig.cameras.length) throw new Error('Invalid report');
+          const safe = report.map(row => {
+            if (!appConfig.cameras.some(camera => camera.id === row.camera)) throw new Error('Unknown camera');
+            const fields = Object.fromEntries(Object.entries(row).filter(([key, value]) =>
+              key !== '__proto__' && (typeof value === 'number' && Number.isFinite(value) || typeof value === 'boolean')));
+            return { ...fields, camera: row.camera,
+              decoder: typeof row.decoder === 'string' ? row.decoder.slice(0, 100) : 'unknown' };
+          });
+          playbackReport = { updatedAt: new Date().toISOString(), cameras: safe };
+          res.writeHead(204);
+          res.end();
+        } catch {
+          res.writeHead(400);
+          res.end('Invalid playback report');
+        }
+      });
+      return;
+    }
 
     if (files[url.pathname]) {
       const [name, type] = files[url.pathname];
