@@ -1,12 +1,13 @@
 'use strict';
 
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, dialog, powerSaveBlocker, Notification } = require('electron');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
 const { generate, GO2RTC_DIR, ROOT } = require('../scripts/generate-go2rtc-config');
+const { TimelapseManager, createTimelapseHandler, findFont } = require('../lib/timelapse');
 
 let PORT = 8765;
 const PORT_CANDIDATES = [8765, 8766, 8767, 8768];
@@ -29,6 +30,9 @@ let go2rtcRestarts = 0;
 let shuttingDown = false;
 let appConfig = null;
 let playbackReport = { updatedAt: null, cameras: [] };
+let timelapse = null;
+let handleTimelapse = null;
+let sleepBlocker = null;
 
 function log(...args) { console.log('[monitor]', ...args); }
 
@@ -124,11 +128,13 @@ function createServer() {
     '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
     '/renderer.js': ['renderer.js', 'application/javascript'],
     '/smooth30.js': ['smooth30.js', 'application/javascript'],
+    '/timelapse-ui.js': ['timelapse-ui.js', 'application/javascript'],
     '/vendor/video-rtc.js': ['vendor/video-rtc.js', 'application/javascript'],
   };
 
   const next = http.createServer(async (req, res) => {
     const url = new URL(req.url, `http://localhost:${PORT}`);
+    if (handleTimelapse && await handleTimelapse(req, res, url)) return;
 
     // Local numeric diagnostics only: no camera images, URLs or credentials.
     if (url.pathname === '/api/playback' && req.method === 'GET') {
@@ -245,6 +251,52 @@ function createWindow() {
   });
   mainWindow.maximize();
   mainWindow.loadURL(`http://127.0.0.1:${PORT}/`);
+  mainWindow.on('close', event => {
+    if (!timelapse?.hasActiveCapture()) return;
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: 'warning',
+      buttons: ['Keep running', 'Quit anyway'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Timelapse in progress',
+      message: 'A timelapse is capturing or scheduled.',
+      detail: 'Capture only runs while Wyze Monitor is open. If you quit, it resumes when you reopen the app, if its time window has not ended.',
+    });
+    if (choice === 0) event.preventDefault();
+  });
+}
+
+async function startTimelapse() {
+  timelapse = new TimelapseManager({
+    // Working frames (several GB for a long capture) stay in local app data;
+    // finished videos go next to recordings in Downloads.
+    root: path.join(process.env.LOCALAPPDATA || app.getPath('userData'), 'Wyze Monitor', 'Timelapse frames'),
+    outputRoot: path.join(app.getPath('downloads'), 'Wyze Monitor', 'Timelapses'),
+    cameras: appConfig.cameras,
+    ffmpeg: appConfig.ffmpeg,
+    // go2rtc re-serves each camera on loopback RTSP; the capture shares its producer.
+    sourceUrl: stream => `rtsp://127.0.0.1:8554/${stream}`,
+    fontFile: findFont(['C:/Windows/Fonts/segoeuib.ttf', 'C:/Windows/Fonts/arialbd.ttf']),
+    renderPreset: 'slow',
+    log: (...args) => log('[timelapse]', ...args),
+    onRendered: (job, files) => {
+      if (!Notification.isSupported()) return;
+      const notice = new Notification({
+        title: 'Timelapse ready',
+        body: `${job.name}: ${files.length === 1 ? '1 video' : `${files.length} videos`} saved to Downloads\\Wyze Monitor\\Timelapses`,
+      });
+      notice.on('click', () => shell.showItemInFolder(files[0]));
+      notice.show();
+    },
+    // Keep Windows awake for long captures; the display may still sleep.
+    onActivity: active => {
+      if (active && sleepBlocker === null) sleepBlocker = powerSaveBlocker.start('prevent-app-suspension');
+      if (!active && sleepBlocker !== null) { powerSaveBlocker.stop(sleepBlocker); sleepBlocker = null; }
+    },
+  });
+  await timelapse.init();
+  timelapse.onActivity(timelapse.hasActiveCapture());
+  handleTimelapse = createTimelapseHandler(timelapse, { platform: 'windows' });
 }
 
 function runFfmpeg(args) {
@@ -265,6 +317,12 @@ function fatal(message) {
 }
 
 ipcMain.handle('open-external', async (_e, url) => shell.openExternal(url));
+ipcMain.handle('reveal-timelapse', async (_e, id, name) => {
+  if (!timelapse) throw new Error('Timelapse is unavailable.');
+  const file = name ? timelapse.outputPath(id, name) : null;
+  if (file) shell.showItemInFolder(file);
+  else await shell.openPath(timelapse.jobDirectory(id));
+});
 ipcMain.handle('save-recording', async (_e, payload) => {
   if (!payload || !payload.buffer) throw new Error('Recording data was empty.');
   const downloads = path.join(app.getPath('downloads'), 'Wyze Monitor');
@@ -295,6 +353,11 @@ app.whenReady().then(async () => {
 
   await startGo2rtc();
   try {
+    await startTimelapse();
+  } catch (err) {
+    log(`timelapse unavailable: ${err.message}`);
+  }
+  try {
     server = await createServer();
   } catch (err) {
     return fatal(err.message);
@@ -303,7 +366,9 @@ app.whenReady().then(async () => {
 });
 
 function shutdown() {
+  if (shuttingDown) return;
   shuttingDown = true;
+  timelapse?.close().catch(() => {});
   stopGo2rtc();
   if (server) server.close();
 }

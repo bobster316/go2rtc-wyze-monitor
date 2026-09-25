@@ -16,6 +16,8 @@ the current LAN and hard-refresh after an update.
 | Record grid or enlarged camera only | Yes | Yes |
 | MP4 output | Electron saves through FFmpeg | Browser MP4, or Pi conversion of WebM |
 | Desktop/taskbar/app toolbar in recorded image | No | No |
+| Timelapse, up to 24 hours, scheduled or manual | Yes, while the app is open | Yes, runs on the Pi with no browser open |
+| Timelapse video location | `Downloads\Wyze Monitor\Timelapses` | Pi storage; **Download** to the viewing device |
 
 Recording uses the same 1920×1080 canvas, with a target of 30 output frames per
 second. This does not change the cameras' captured frame rate or make every
@@ -48,11 +50,13 @@ certified alongside every other home-server workload.
 
 ## Deployment
 
-`monitor-web` requires a writable `/recordings` volume while its root filesystem
-remains read-only. Keep existing published ports and private camera configuration.
+`monitor-web` requires writable `/recordings` and `/timelapses` volumes while its
+root filesystem remains read-only. Timelapse capture also needs go2rtc's RTSP
+restream on the private Compose network; see [Timelapse](TIMELAPSE.md). Keep existing published ports and private camera configuration.
 For an existing Pi 5 deployment, build and recreate only `monitor-web` with
-`--no-deps`; do not recreate other Compose projects or the go2rtc service.
+`--no-deps`, except when first enabling timelapse, which needs one go2rtc
+restart. Do not recreate other Compose projects.
 
-Features absent in both implementations include scheduled recording, motion
-triggers, audio recording and a recording-history UI. This update does not
-claim to add those features.
+Timelapses are covered in [Timelapse](TIMELAPSE.md). Features absent in both
+implementations include scheduled video recording, motion triggers, audio
+recording and a history view for ordinary recordings.

@@ -17,7 +17,9 @@ const config = loadConfig();
 config.ffmpeg = 'ffmpeg';
 const yaml = buildYaml(config, {
   apiListen: ':1984',
-  rtspListen: '127.0.0.1:8554',
+  // Reachable by monitor-web on the private Compose network for timelapse
+  // capture. Not published to the LAN.
+  rtspListen: ':8554',
   webrtcListen: ':8555',
   candidates: [`${host}:${publicPort}`],
 });

@@ -36,6 +36,10 @@
       <button id="diagnosticsButton" class="action" type="button">Diagnostics</button>
       <button id="recordToggle" class="action record-action" type="button" aria-pressed="false">Record</button>
       <a id="recordingDownload" class="action recording-download hidden" href="#" download>Download recording</a>
+      <div class="tl-menu-wrap">
+        <button id="timelapseButton" class="action timelapse-action hidden" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="tlMenu" title="Full-resolution timelapse of one or all cameras, up to 24 hours">Timelapse</button>
+        <div id="tlMenu" class="tl-menu hidden" role="menu" aria-label="Timelapse"></div>
+      </div>
       <button id="refreshAll" class="action">Refresh</button>
       <button id="fullscreen" class="action">Fullscreen</button>
     </div>
@@ -91,6 +95,96 @@
     </div>
   </div>
 
+  <aside class="tl-panel hidden" id="timelapsePanel" aria-labelledby="tlTitle" aria-hidden="true">
+    <div class="tl-head">
+      <div><strong id="tlTitle">Timelapse</strong><span>Full-resolution capture, up to 24 hours</span></div>
+      <button id="tlClose" type="button">Close</button>
+    </div>
+    <div class="tl-body">
+      <section class="tl-section hidden" id="tlActiveSection">
+        <h3>Capturing &amp; scheduled</h3>
+        <div id="tlActive"></div>
+      </section>
+
+      <section class="tl-section tl-new">
+        <h3>New timelapse</h3>
+        <div class="tl-field">
+          <span class="tl-label">Cameras</span>
+          <div class="tl-chips" id="tlCameras" role="group" aria-label="Cameras"></div>
+        </div>
+        <div class="tl-field" id="tlLayoutField">
+          <span class="tl-label">Video</span>
+          <div class="tl-seg" id="tlLayout" role="group" aria-label="Video layout">
+            <button type="button" data-value="grid" title="All selected cameras in one 3840x2160 video">Grid 4K</button>
+            <button type="button" data-value="individual" title="One 2560x1440 video per camera">Each camera</button>
+            <button type="button" data-value="both">Both</button>
+          </div>
+        </div>
+        <div class="tl-field">
+          <span class="tl-label">Start</span>
+          <div class="tl-row">
+            <div class="tl-seg" id="tlStartMode" role="group" aria-label="Start">
+              <button type="button" data-value="now">Now</button>
+              <button type="button" data-value="later">At a time</button>
+            </div>
+            <input type="datetime-local" id="tlStartAt" class="hidden" aria-label="Start time" />
+          </div>
+        </div>
+        <div class="tl-field">
+          <span class="tl-label">Stop</span>
+          <div class="tl-seg" id="tlStopMode" role="group" aria-label="Stop">
+            <button type="button" data-value="after">After a set time</button>
+            <button type="button" data-value="manual">When I stop it</button>
+          </div>
+          <div class="tl-chips" id="tlDurations" role="group" aria-label="Capture length"></div>
+        </div>
+        <div class="tl-field" id="tlLengthField">
+          <span class="tl-label" id="tlLengthLabel">Finished video length</span>
+          <div class="tl-chips" id="tlLengths" role="group" aria-labelledby="tlLengthLabel"></div>
+        </div>
+        <details class="tl-look" id="tlLook">
+          <summary>Look &amp; quality</summary>
+          <div class="tl-field">
+            <span class="tl-label">Frame rate</span>
+            <div class="tl-seg" id="tlFps" role="group" aria-label="Frame rate">
+              <button type="button" data-value="24">24 fps</button>
+              <button type="button" data-value="30">30 fps</button>
+              <button type="button" data-value="60">60 fps</button>
+            </div>
+          </div>
+          <label class="tl-toggle"><input type="checkbox" id="tlDeflicker" /><span><b>Deflicker</b><small>Evens out exposure pumping and passing clouds</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlSmooth" /><span><b>Motion smoothing</b><small>Blends neighbouring frames for silky, cinematic motion</small></span></label>
+          <label class="tl-toggle" id="tlLabelsToggle"><input type="checkbox" id="tlLabels" /><span><b>Camera names</b><small>Label each tile in the grid video</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlTimestamp" /><span><b>Date and time</b><small>Adds a clock showing the real capture time</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlSkipNight" /><span><b>Skip night-vision frames</b><small>Removes black-and-white infrared frames</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlTidy" /><span><b>Delete frames after the video is made</b><small>Frees the disk space. You won't be able to re-render with different settings.</small></span></label>
+        </details>
+        <input type="text" id="tlName" maxlength="60" placeholder="Name (optional)" aria-label="Timelapse name" />
+        <div class="tl-summary" id="tlSummary" aria-live="polite"></div>
+        <button class="tl-primary" id="tlStart" type="button">Start timelapse</button>
+        <div class="tl-error hidden" id="tlError" role="alert"></div>
+      </section>
+
+      <section class="tl-section">
+        <h3 id="tlLibraryTitle">All timelapses</h3>
+        <div id="tlLibrary"><p class="tl-empty">Finished timelapses appear here.</p></div>
+      </section>
+    </div>
+  </aside>
+
+  <div class="tl-toast hidden" id="tlToast" role="status" aria-live="polite"></div>
+
+  <div class="tl-player hidden" id="tlPlayer" aria-hidden="true">
+    <div class="tl-player-panel" role="dialog" aria-modal="true" aria-labelledby="tlPlayerTitle">
+      <div class="tl-player-head">
+        <strong id="tlPlayerTitle"></strong>
+        <div><a id="tlPlayerDownload" class="tl-btn" href="#" download>Download</a><button id="tlPlayerClose" type="button">Close</button></div>
+      </div>
+      <video id="tlPlayerVideo" controls loop playsinline></video>
+    </div>
+  </div>
+
   <script type="module" src="/renderer.js"></script>
+  <script type="module" src="/timelapse-ui.js"></script>
 </body>
 </html>

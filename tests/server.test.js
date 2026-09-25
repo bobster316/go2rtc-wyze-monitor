@@ -25,8 +25,8 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
     }
     fs.rmSync(fixture, { recursive: true, force: true });
   });
-  for (const dir of ['scripts', 'raspberry-pi', 'src']) fs.mkdirSync(path.join(fixture, dir));
-  for (const file of ['scripts/generate-go2rtc-config.js', 'raspberry-pi/server.js', 'raspberry-pi/recordings.js']) {
+  for (const dir of ['scripts', 'raspberry-pi', 'src', 'lib']) fs.mkdirSync(path.join(fixture, dir));
+  for (const file of ['scripts/generate-go2rtc-config.js', 'raspberry-pi/server.js', 'raspberry-pi/recordings.js', 'lib/timelapse.js']) {
     fs.copyFileSync(path.join(root, file), path.join(fixture, file));
   }
   fs.writeFileSync(path.join(fixture, 'src/renderer.html'), '<!doctype html><title>Dummy test</title>');
@@ -44,7 +44,8 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
   child = spawn(process.execPath, ['raspberry-pi/server.js'], {
     cwd: fixture,
     env: { ...process.env, NODE_PATH: path.join(root, 'node_modules'), PORT: '0',
-      GO2RTC_HOST: '127.0.0.1', GO2RTC_API_PORT: String(upstream.address().port), DEFAULT_QUALITY: 'main' },
+      GO2RTC_HOST: '127.0.0.1', GO2RTC_API_PORT: String(upstream.address().port), DEFAULT_QUALITY: 'main',
+      TIMELAPSE_DIR: path.join(fixture, 'timelapses') },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const port = await new Promise((resolve, reject) => {
@@ -77,6 +78,17 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
   for (const route of ['/cameras.yaml', '/.env', '/api/streams', '/runtime/go2rtc.yaml']) {
     assert.equal((await fetch(base + route)).status, 404);
   }
+  let timelapse;
+  for (let i = 0; i < 50 && timelapse?.status !== 200; i++) {
+    timelapse = await fetch(base + '/api/timelapse');
+    if (timelapse.status !== 200) await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  const timelapseText = await timelapse.text();
+  assert.equal(timelapse.status, 200);
+  assert.ok(!timelapseText.includes(dummyPassword));
+  assert.ok(!timelapseText.includes('PRIVATE_TEST_USER'));
+  assert.equal(JSON.parse(timelapseText).platform, 'pi');
+  assert.equal((await fetch(base + '/timelapse-ui.js')).status, 404, 'fixture has no UI file');
   const page = await fetch(base);
   assert.equal(page.status, 200);
   assert.equal(page.headers.get('x-content-type-options'), 'nosniff');

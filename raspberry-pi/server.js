@@ -6,6 +6,7 @@ const net = require('net');
 const path = require('path');
 const { loadConfig } = require('../scripts/generate-go2rtc-config');
 const { createRecordingHandler, MAX_BYTES } = require('./recordings');
+const { TimelapseManager, createTimelapseHandler, findFont } = require('../lib/timelapse');
 const handleRecording = createRecordingHandler();
 
 const PORT = Number(process.env.PORT || 8765);
@@ -13,6 +14,20 @@ const UPSTREAM_HOST = process.env.GO2RTC_HOST || 'go2rtc';
 const UPSTREAM_PORT = Number(process.env.GO2RTC_API_PORT || 1984);
 const SRC = path.resolve(__dirname, '..', 'src');
 const config = loadConfig();
+const RTSP_PORT = Number(process.env.GO2RTC_RTSP_PORT || 8554);
+// Captures run in this container, so they continue with no browser open.
+const timelapse = new TimelapseManager({
+  root: process.env.TIMELAPSE_DIR || path.join(require('os').tmpdir(), 'wyze-timelapses'),
+  cameras: config.cameras,
+  sourceUrl: stream => `rtsp://${UPSTREAM_HOST}:${RTSP_PORT}/${stream}`,
+  fontFile: findFont([process.env.TIMELAPSE_FONT, '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'].filter(Boolean)),
+  // No hardware H.264 encoder on a Pi 5: leave a core for go2rtc and the web server.
+  renderPreset: process.env.TIMELAPSE_PRESET || 'medium',
+  renderThreads: Number(process.env.TIMELAPSE_THREADS || Math.max(1, require('os').cpus().length - 1)),
+  lowPriority: true,
+});
+const handleTimelapse = createTimelapseHandler(timelapse, { platform: 'pi' });
+let timelapseReady = false;
 const qualities = {
   main: { suffix: '_main', label: 'HD' },
   sub: { suffix: '_sub', label: 'Eco' },
@@ -24,6 +39,7 @@ const files = {
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/renderer.js': ['renderer.js', 'application/javascript; charset=utf-8'],
   '/smooth30.js': ['smooth30.js', 'application/javascript; charset=utf-8'],
+  '/timelapse-ui.js': ['timelapse-ui.js', 'application/javascript; charset=utf-8'],
   '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
   '/vendor/video-rtc.js': ['vendor/video-rtc.js', 'application/javascript; charset=utf-8'],
 };
@@ -61,6 +77,7 @@ function getStreams() {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (url.pathname === '/api/recordings') return handleRecording(req, res);
+  if (timelapseReady && await handleTimelapse(req, res, url)) return;
   // Shared viewer diagnostics remain local to the browser on the Pi deployment.
   if (url.pathname === '/api/playback' && req.method === 'POST') {
     req.resume();
@@ -141,9 +158,13 @@ server.on('upgrade', (req, socket, head) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Wyze Monitor listening on ${server.address().port}; ${process.arch}; default ${defaultQuality}.`);
 });
+timelapse.init()
+  .then(() => { timelapseReady = true; })
+  .catch(err => console.error(`Timelapse unavailable: ${err.message}`));
 
 function shutdown() {
-  server.close(() => process.exit(0));
+  // Leave captures marked active so they resume when the container restarts.
+  timelapse.close().catch(() => {}).finally(() => server.close(() => process.exit(0)));
   setTimeout(() => process.exit(1), 5000).unref();
 }
 process.on('SIGTERM', shutdown);

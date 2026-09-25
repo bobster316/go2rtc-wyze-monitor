@@ -39,7 +39,9 @@ A second consumer can share an existing producer.
 | src/renderer.js | Shared grid, focus view, quality, reconnect and telemetry |
 | src/smooth30.js | WebGL temporal blending and output scheduler |
 | src/vendor/video-rtc.js | Upstream go2rtc browser player |
-| raspberry-pi/server.js | LAN HTTP server and player WebSocket proxy |
+| raspberry-pi/server.js | LAN HTTP server, player WebSocket proxy and timelapse API |
+| lib/timelapse.js | Shared timelapse capture, scheduling, rendering and HTTP API |
+| src/timelapse-ui.js | Timelapse menu, setup panel and library |
 | raspberry-pi/generate-go2rtc-config.js | Private container config with Pi ICE candidate |
 | raspberry-pi/install.sh | First-install coordination and host prerequisites |
 | raspberry-pi/configure.sh | Camera wizard and private configuration |

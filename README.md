@@ -31,6 +31,7 @@ does not require Windows, Electron, or a pre-existing deployment.
 - [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
 - [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
 - [Platform features and recording](docs/PLATFORM-FEATURES.md) - Windows/Pi parity and browser download behaviour.
+- [Timelapse](docs/TIMELAPSE.md) - full-resolution timelapses of any cameras, up to 24 hours.
 - [Operation, backup, recovery and removal](docs/OPERATIONS.md) - recreate your installation and maintain it.
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - camera, browser, network, Docker and installer problems.
 - [Architecture](docs/ARCHITECTURE.md) - stream path, shared code and process ownership.
@@ -46,7 +47,9 @@ does not require Windows, Electron, or a pre-existing deployment.
 Displays all configured cameras in an adaptive grid, with HD/Eco selection,
 per-camera reconnect, enlarged main-stream views, fullscreen monitoring and
 diagnostics. The Electron app records the grid or focused camera as native MP4
-files in the Windows Downloads folder.
+files in the Windows Downloads folder. Both versions capture full-resolution
+timelapses of any combination of cameras for up to 24 hours, scheduled or
+manual, and render them as grid or per-camera H.264 videos.
 Smooth30 optionally blends source frames in the viewing browser, with visible
 `SRC`, `OUT` and synthetic-frame labels. Full-resolution HD sources retain
 their 2560x1440 backing canvas. Eco is an explicit user choice.
