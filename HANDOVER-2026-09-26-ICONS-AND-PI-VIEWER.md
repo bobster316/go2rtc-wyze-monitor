@@ -5,7 +5,8 @@ macOS, iOS and Android), plus a second Windows app, **Wyze Monitor Pi**, that
 opens the Raspberry Pi dashboard in its own window so both can be pinned to
 the Windows taskbar.
 
-Nothing in this handover is committed or deployed to the Pi yet.
+Committed and pushed (both repos), deployed to the Pi 5, installer ZIPs
+rebuilt. The only open item is the user pinning the two taskbar icons.
 
 Previous handover: [HANDOVER-2026-09-25-TIMELAPSE.md](HANDOVER-2026-09-25-TIMELAPSE.md)
 (its open items are unchanged; see "Carried over" at the end).
@@ -19,10 +20,37 @@ Previous handover: [HANDOVER-2026-09-25-TIMELAPSE.md](HANDOVER-2026-09-25-TIMELA
 | Windows Electron window icon + app ID | Done and verified: relaunched from the Start menu, it shows as one blue button |
 | Wyze Monitor Pi viewer on Windows | Built, launched, window verified open with the Pi icon |
 | Taskbar pins (order: 1 Pi, 2 Windows) | Both apps running on the taskbar at equal size (verified by screenshot). **User action:** right-click each → Pin to taskbar, then drag the red Pi icon before the blue one. Windows 11 blocks programmatic pinning. |
-| Pi favicon + desktop/menu launcher icon | Updated in both repos; **Pi 5 not redeployed** |
-| Pi installer ZIP | Allowlists fixed; ZIP **not rebuilt** |
-| Tests | 18/18 (Windows repo), 15/15 (Pi repo) after the icon changes; `pi-viewer.js` has no tests (syntax-checked, run manually) |
-| Git | Uncommitted in both repos (see "Files changed") |
+| Pi favicon | **Deployed to Pi 5** (26 Sep, 10:31). `/favicon.svg` serves the new red icon; health OK (go2rtc true, 8 streams) |
+| Pi desktop/menu launcher icon | Updated in both repos. The Pi 5 has **no desktop launcher installed** (`/usr/local/share/applications` absent), so there was nothing to update there |
+| Pi installer ZIP | Rebuilt in both repos; audited: favicon + launcher SVG present, no `.env` / `cameras.yaml` / `go2rtc.yaml`. SHA-256 `804769EA…FA4B4` (Windows repo, 59 files), `EADF8F91…F27F3` (Pi repo, 50 files). Not uploaded to a GitHub release |
+| Tests | 18/18 (Windows repo), 15/15 (Pi repo); `pi-viewer.js` has no tests (syntax-checked, run manually) |
+| Git | Pushed: `go2rtc-wyze-monitor` `main` **670a5d2**, `wyze-pi-camera-dashboard` `master` **7e365e1** (plus this handover update) |
+
+### Pi 5 deploy (26 Sep, ~10:31)
+
+- No timelapse job was running (`/api/timelapse` jobs empty) before recreating
+  the container.
+- Shipped only the changed files, from the pushed commit via `git archive`:
+  `raspberry-pi/server.js`, `raspberry-pi/wyze-monitor.svg`,
+  `src/favicon-pi.svg`. Before this, the Pi's `server.js` and
+  `src/favicon.svg` matched the previous commit exactly (sha256). The Pi's
+  own `Dockerfile` differs from the repo and was left alone.
+- Script: `tmp/deploy-pi5-icons.sh` (local, gitignored). It backs up, then
+  builds `monitor-web` and runs `up -d --no-deps monitor-web`. go2rtc was not
+  restarted.
+- Backup: `/home/pi/wyze-monitor-backup-20260926-103124` (source,
+  image tag `wyze-monitor-rpi-web:backup-20260926-103124`, container lists).
+  Rollback: retag that image as `wyze-monitor-rpi-web:local` and
+  `up -d --no-deps monitor-web`.
+- Verified: all 9 other containers (go2rtc, Postiz, Temporal…) kept identical
+  IDs; the served favicon is byte-identical to the commit apart from line
+  endings. The SVGs arrived with CRLF because the repo has no `*.svg eol=lf`
+  rule and this PC uses autocrlf; this is harmless for SVG. Add `*.svg text
+  eol=lf` to `.gitattributes` if you want tidy files on the Pi.
+- Observation: the installer ZIPs list entries with backslashes
+  (`wyze-monitor-rpi\src\...`). Info-ZIP `unzip` on the Pi converts these
+  with a warning, but other extractors may not. This predates today's work;
+  worth checking in `build-pi-installer.ps1`.
 
 ## What the user asked for and decided
 
@@ -258,7 +286,7 @@ Outside the repos (live on this PC):
 - Desktop `Wyze Camera Monitor.lnk` (app ID added); old taskbar pin removed (lost, see above)
 - New: Start menu `Wyze Camera Monitor.lnk` and Start menu + Desktop `Wyze Monitor Pi.lnk`
 
-### Caution before committing
+### Third-party icons kept out of git (handled)
 
 `docs/icon-design/icon-research-competitors.png` and
 `icon-concepts-in-market.png` contain **other companies' app icons** (Ring,
@@ -281,16 +309,12 @@ can be deleted, or kept for future design rounds.
    PowerShell 5.1 `Get-Content -Raw`/`Set-Content` corrupted UTF-8 in these
    handovers once (`—` became `â€”`). It was repaired; edit Markdown with an
    editor or pass `-Encoding UTF8` explicitly.
-3. Decide on `docs/icon-design/` (gitignore the competitor sheets), then
-   commit both repos.
-4. Redeploy `monitor-web` on the Pi 5 so its favicon and launcher icon update.
-   Use the same method as the timelapse deploy (backup first; keep
-   Postiz/Temporal untouched; `--no-deps`). The Pi's desktop launcher icon
-   also needs `raspberry-pi/wyze-monitor.svg` reinstalled to
-   `/usr/local/share/icons/hicolor/scalable/apps/`, then
-   `gtk-update-icon-cache` if the menu keeps the old one.
-5. Rebuild the Pi installer ZIP (`scripts/build-pi-installer.ps1`) so it
-   contains the favicon and the new launcher icon.
+3. Done: competitor sheets gitignored; both repos committed and pushed.
+4. Done: Pi 5 redeployed (see "Pi 5 deploy"). The Pi 4 (`192.168.1.93`) was
+   **not** updated. It runs the older deployment; update it the same way if
+   it is still in use.
+5. Done: installer ZIPs rebuilt. Publishing them as GitHub releases still
+   needs the user's go-ahead.
 6. Optional polish:
    - light/dark "unplated" taskbar variants (Windows supports separate assets)
    - an Android vector-drawable export
