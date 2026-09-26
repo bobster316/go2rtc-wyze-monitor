@@ -26,6 +26,25 @@ Previous handover: [HANDOVER-2026-09-25-TIMELAPSE.md](HANDOVER-2026-09-25-TIMELA
 | Tests | 18/18 (Windows repo), 15/15 (Pi repo); `pi-viewer.js` has no tests (syntax-checked, run manually) |
 | Git | Pushed: `go2rtc-wyze-monitor` `main` **670a5d2**, `wyze-pi-camera-dashboard` `master` **7e365e1** (plus this handover update) |
 
+### Repositories made private (26 Sep, user request)
+
+`bobster316/go2rtc-wyze-monitor` and `bobster316/wyze-pi-camera-dashboard`
+were switched from public to **private** (`gh repo edit --visibility
+private`). Both had 0 stars and 0 forks. Verified via `gh repo view`. The
+user's only remaining public repo is `ender3v2garage-config` (unrelated).
+
+Consequences:
+- Public links now 404. They appear in `wyze-v4-youtube-video/source/youtube-metadata.md`,
+  `output/tiktok/TIKTOK-METADATA.md`, `scripts/build.py` (may be burned into
+  the rendered video) and the repos' own READMEs/docs (`git clone` and
+  Releases instructions). Published YouTube/TikTok descriptions should be
+  updated, or the repos made public again, if viewers are meant to follow them.
+- Runtime is unaffected: Windows setup downloads go2rtc from `AlexxIT/go2rtc`
+  (public), and the Pi installs from the local ZIP. No script pulls from these
+  repos.
+- The earlier "publish GitHub releases" idea would now be private releases;
+  share the installer ZIP another way if it is meant for the public.
+
 ### Pi 5 deploy (26 Sep, ~10:31)
 
 - No timelapse job was running (`/api/timelapse` jobs empty) before recreating
