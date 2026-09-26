@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  
+  <defs><linearGradient id="if" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#16294A"/><stop offset="1" stop-color="#060D1C"/></linearGradient></defs>
+  <rect width="1024" height="1024" fill="url(#if)"/><defs>
+    <linearGradient id="ig" gradientUnits="userSpaceOnUse" x1="210.71" y1="364.31" x2="695.14" y2="789.66">
+      <stop offset="0" stop-color="#62C6FF"/><stop offset="0.5" stop-color="#1A8CF0"/><stop offset="1" stop-color="#0050B8"/>
+    </linearGradient>
+    <linearGradient id="ih" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="id" cx="0.4" cy="0.36" r="0.7">
+      <stop offset="0" stop-color="#FF6A5E"/><stop offset="1" stop-color="#E0261B"/>
+    </radialGradient>
+    <mask id="ic1" maskUnits="userSpaceOnUse">
+      <rect x="-102.39999999999998" y="-102.39999999999998" width="1228.8" height="1228.8" fill="#fff"/>
+      <rect x="187.08" y="340.68" width="531.69" height="472.62" rx="112.25" fill="#000"/>
+    </mask>
+    <mask id="ic2" maskUnits="userSpaceOnUse">
+      <rect x="-102.39999999999998" y="-102.39999999999998" width="1228.8" height="1228.8" fill="#fff"/>
+      <rect x="246.15" y="275.69" width="531.69" height="472.62" rx="112.25" fill="#000"/>
+    </mask>
+    <filter id="is" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="5.91" stdDeviation="5.32" flood-color="#002A66" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="17.72" stdDeviation="17.72" flood-color="#002A66" flood-opacity="0.20"/>
+    </filter>
+    <filter id="il" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="4.43" stdDeviation="7.09" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#is)">
+    <rect x="328.86" y="234.34" width="484.43" height="425.35" rx="88.62" fill="#0B3F8F" mask="url(#ic2)"/>
+    <rect x="269.78" y="299.32" width="484.43" height="425.35" rx="88.62" fill="#CFEAFF" mask="url(#ic1)"/>
+    <rect x="210.71" y="364.31" width="484.43" height="425.35" rx="88.62" fill="url(#ig)"/>
+  </g>
+  <rect x="210.71" y="364.31" width="484.43" height="425.35" rx="88.62" fill="url(#ih)"/>
+  <circle cx="452.92" cy="576.98" r="110.59" fill="#FFFFFF" filter="url(#il)"/>
+  <circle cx="452.92" cy="576.98" r="68.57" fill="url(#id)"/>
+</svg>

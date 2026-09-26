@@ -59,6 +59,7 @@ $files = @(
     'src/smooth30.js',
     'src/timelapse-ui.js',
     'src/styles.css',
+    'src/favicon-pi.svg',
     'src/vendor/video-rtc.js',
     'raspberry-pi/.env.example',
     'raspberry-pi/COMPATIBILITY.md',

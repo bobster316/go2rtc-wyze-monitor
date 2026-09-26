@@ -16,6 +16,11 @@ const GO2RTC_CONFIG = path.join(GO2RTC_DIR, 'go2rtc.yaml');
 const GO2RTC_API = 'http://127.0.0.1:1984';
 const GO2RTC_WS = 'ws://127.0.0.1:1984/api/ws';
 
+// Must match System.AppUserModel.ID on the desktop and taskbar shortcuts, or
+// Windows shows the running window as a second taskbar button.
+const APP_USER_MODEL_ID = 'WyzeCameraMonitor.Windows';
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
+
 // Wyze Cam v4: stream0 is 2560x1440@20, stream1 is 640x360@20, both H.264 High.
 // Nothing is transcoded, so these are the camera's own numbers.
 const qualities = {
@@ -242,6 +247,7 @@ function createWindow() {
     minHeight: 760,
     backgroundColor: '#070a0e',
     title: 'Wyze Monitor',
+    icon: path.join(__dirname, '..', 'assets', 'icons', 'windows', 'wyze-monitor.ico'),
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,

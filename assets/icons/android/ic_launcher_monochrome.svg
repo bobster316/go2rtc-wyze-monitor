@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+  
+  <defs>
+    <mask id="amc1" maskUnits="userSpaceOnUse">
+      <rect x="34.56" y="34.56" width="362.88" height="362.88" fill="#fff"/>
+      <rect x="120.05" y="165.41" width="157.02" height="139.57" rx="33.15" fill="#000"/>
+    </mask>
+    <mask id="amc2" maskUnits="userSpaceOnUse">
+      <rect x="34.56" y="34.56" width="362.88" height="362.88" fill="#fff"/>
+      <rect x="137.49" y="146.22" width="157.02" height="139.57" rx="33.15" fill="#000"/>
+    </mask>
+    <mask id="amr" maskUnits="userSpaceOnUse">
+      <rect x="34.56" y="34.56" width="362.88" height="362.88" fill="#fff"/>
+      <circle cx="198.55" cy="235.19" r="32.66" fill="#000"/>
+      <circle cx="198.55" cy="235.19" r="20.25" fill="#fff"/>
+    </mask>
+  </defs>
+  <rect x="161.92" y="134.00" width="143.06" height="125.61" rx="26.17" fill="#FFFFFF" mask="url(#amc2)" fill-opacity="0.45"/>
+  <rect x="144.47" y="153.19" width="143.06" height="125.61" rx="26.17" fill="#FFFFFF" mask="url(#amc1)" fill-opacity="0.70"/>
+  <g mask="url(#amr)"><rect x="127.02" y="172.38" width="143.06" height="125.61" rx="26.17" fill="#FFFFFF"/></g>
+</svg>

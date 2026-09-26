@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  
+  <defs>
+    <linearGradient id="wg" gradientUnits="userSpaceOnUse" x1="11.29" y1="68.79" x2="198.94" y2="233.56">
+      <stop offset="0" stop-color="#62C6FF"/><stop offset="0.5" stop-color="#1A8CF0"/><stop offset="1" stop-color="#0050B8"/>
+    </linearGradient>
+    <linearGradient id="wh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="wd" cx="0.4" cy="0.36" r="0.7">
+      <stop offset="0" stop-color="#FF6A5E"/><stop offset="1" stop-color="#E0261B"/>
+    </radialGradient>
+    <mask id="wc1" maskUnits="userSpaceOnUse">
+      <rect x="-110" y="-112" width="476" height="476" fill="#fff"/>
+      <rect x="2.13" y="59.63" width="205.96" height="183.08" rx="43.48" fill="#000"/>
+    </mask>
+    <mask id="wc2" maskUnits="userSpaceOnUse">
+      <rect x="-110" y="-112" width="476" height="476" fill="#fff"/>
+      <rect x="25.02" y="34.46" width="205.96" height="183.08" rx="43.48" fill="#000"/>
+    </mask>
+    <filter id="ws" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="2.29" stdDeviation="2.06" flood-color="#002A66" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="6.87" stdDeviation="6.87" flood-color="#002A66" flood-opacity="0.20"/>
+    </filter>
+    <filter id="wl" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="1.72" stdDeviation="2.75" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#ws)">
+    <rect x="57.06" y="18.44" width="187.65" height="164.77" rx="34.33" fill="#0B3F8F" mask="url(#wc2)"/>
+    <rect x="34.17" y="43.62" width="187.65" height="164.77" rx="34.33" fill="#CFEAFF" mask="url(#wc1)"/>
+    <rect x="11.29" y="68.79" width="187.65" height="164.77" rx="34.33" fill="url(#wg)"/>
+  </g>
+  <rect x="11.29" y="68.79" width="187.65" height="164.77" rx="34.33" fill="url(#wh)"/>
+  <circle cx="105.12" cy="151.17" r="42.84" fill="#FFFFFF" filter="url(#wl)"/>
+  <circle cx="105.12" cy="151.17" r="26.56" fill="url(#wd)"/>
+</svg>

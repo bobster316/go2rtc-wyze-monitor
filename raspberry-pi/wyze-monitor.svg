@@ -1,6 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <rect width="256" height="256" rx="54" fill="#e11d2e"/>
-  <path d="M45 70h30l20 94 22-72h22l22 72 20-94h30l-32 122h-31l-20-62-20 62H77z" fill="#fff"/>
-  <circle cx="198" cy="58" r="24" fill="#15191f" stroke="#fff" stroke-width="8"/>
-  <circle cx="198" cy="58" r="8" fill="#55d6ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  
+  <defs>
+    <linearGradient id="pg" gradientUnits="userSpaceOnUse" x1="11.29" y1="68.79" x2="198.94" y2="233.56">
+      <stop offset="0" stop-color="#F0457A"/><stop offset="0.5" stop-color="#D01E54"/><stop offset="1" stop-color="#9E0F3A"/>
+    </linearGradient>
+    <linearGradient id="ph" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pd" cx="0.4" cy="0.36" r="0.7">
+      <stop offset="0" stop-color="#3A3A3A"/><stop offset="1" stop-color="#0A0A0A"/>
+    </radialGradient>
+    <mask id="pc1" maskUnits="userSpaceOnUse">
+      <rect x="-110" y="-112" width="476" height="476" fill="#fff"/>
+      <rect x="2.13" y="59.63" width="205.96" height="183.08" rx="43.48" fill="#000"/>
+    </mask>
+    <mask id="pc2" maskUnits="userSpaceOnUse">
+      <rect x="-110" y="-112" width="476" height="476" fill="#fff"/>
+      <rect x="25.02" y="34.46" width="205.96" height="183.08" rx="43.48" fill="#000"/>
+    </mask>
+    <filter id="ps" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="2.29" stdDeviation="2.06" flood-color="#000000" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="6.87" stdDeviation="6.87" flood-color="#000000" flood-opacity="0.20"/>
+    </filter>
+    <filter id="pl" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="1.72" stdDeviation="2.75" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#ps)">
+    <rect x="57.06" y="18.44" width="187.65" height="164.77" rx="34.33" fill="#8E8E95" mask="url(#pc2)"/>
+    <rect x="34.17" y="43.62" width="187.65" height="164.77" rx="34.33" fill="#FFFFFF" mask="url(#pc1)"/>
+    <rect x="11.29" y="68.79" width="187.65" height="164.77" rx="34.33" fill="url(#pg)"/>
+  </g>
+  <rect x="11.29" y="68.79" width="187.65" height="164.77" rx="34.33" fill="url(#ph)"/>
+  <circle cx="105.12" cy="151.17" r="42.84" fill="#FFFFFF" filter="url(#pl)"/>
+  <circle cx="105.12" cy="151.17" r="26.56" fill="url(#pd)"/>
 </svg>

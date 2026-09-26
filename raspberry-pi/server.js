@@ -40,7 +40,7 @@ const files = {
   '/renderer.js': ['renderer.js', 'application/javascript; charset=utf-8'],
   '/smooth30.js': ['smooth30.js', 'application/javascript; charset=utf-8'],
   '/timelapse-ui.js': ['timelapse-ui.js', 'application/javascript; charset=utf-8'],
-  '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
+  '/favicon.svg': ['favicon-pi.svg', 'image/svg+xml'],
   '/vendor/video-rtc.js': ['vendor/video-rtc.js', 'application/javascript; charset=utf-8'],
 };
 

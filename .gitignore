@@ -51,3 +51,8 @@ output/
 *.mov
 *.wav
 *.mp3
+
+# Icon research sheets contain other companies' app icons; keep local.
+docs/icon-design/icon-research-competitors.png
+docs/icon-design/icon-concepts-in-market.png
+__pycache__/

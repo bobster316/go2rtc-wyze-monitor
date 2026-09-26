@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432" width="432" height="432">
+  
+  <defs>
+    <linearGradient id="afg" gradientUnits="userSpaceOnUse" x1="127.02" y1="172.38" x2="270.08" y2="298.00">
+      <stop offset="0" stop-color="#62C6FF"/><stop offset="0.5" stop-color="#1A8CF0"/><stop offset="1" stop-color="#0050B8"/>
+    </linearGradient>
+    <linearGradient id="afh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="afd" cx="0.4" cy="0.36" r="0.7">
+      <stop offset="0" stop-color="#FF6A5E"/><stop offset="1" stop-color="#E0261B"/>
+    </radialGradient>
+    <mask id="afc1" maskUnits="userSpaceOnUse">
+      <rect x="34.56" y="34.56" width="362.88" height="362.88" fill="#fff"/>
+      <rect x="120.05" y="165.41" width="157.02" height="139.57" rx="33.15" fill="#000"/>
+    </mask>
+    <mask id="afc2" maskUnits="userSpaceOnUse">
+      <rect x="34.56" y="34.56" width="362.88" height="362.88" fill="#fff"/>
+      <rect x="137.49" y="146.22" width="157.02" height="139.57" rx="33.15" fill="#000"/>
+    </mask>
+    <filter id="afs" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="1.74" stdDeviation="1.57" flood-color="#002A66" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="5.23" stdDeviation="5.23" flood-color="#002A66" flood-opacity="0.20"/>
+    </filter>
+    <filter id="afl" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="1.31" stdDeviation="2.09" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#afs)">
+    <rect x="161.92" y="134.00" width="143.06" height="125.61" rx="26.17" fill="#0B3F8F" mask="url(#afc2)"/>
+    <rect x="144.47" y="153.19" width="143.06" height="125.61" rx="26.17" fill="#CFEAFF" mask="url(#afc1)"/>
+    <rect x="127.02" y="172.38" width="143.06" height="125.61" rx="26.17" fill="url(#afg)"/>
+  </g>
+  <rect x="127.02" y="172.38" width="143.06" height="125.61" rx="26.17" fill="url(#afh)"/>
+  <circle cx="198.55" cy="235.19" r="32.66" fill="#FFFFFF" filter="url(#afl)"/>
+  <circle cx="198.55" cy="235.19" r="20.25" fill="url(#afd)"/>
+</svg>
