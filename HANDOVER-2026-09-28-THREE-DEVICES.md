@@ -107,6 +107,9 @@ the main repo with a script and never edit it by hand.
 
 ### Planned iOS and Android apps (user, 28 Sep)
 
+**On hold:** the user said not to worry about the mobile versions for now.
+The notes below are kept for when they are picked up again.
+
 The user plans iOS and Android apps. This strengthens the one-repo case.
 
 - Phones would be **viewers**, not hosts: they connect to go2rtc and the
