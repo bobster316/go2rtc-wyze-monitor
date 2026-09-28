@@ -358,6 +358,7 @@ can be deleted, or kept for future design rounds.
 - Candidates: daylight-only capture, repeat daily.
 - Run a full 24 h capture on the Pi and time the 4K render.
 - Validate night/IR detection on real footage.
-- Clean up `tmp/timelapse-proto/`, `D:\Wyze-Cam-v4\.playwright-mcp/`,
-  `%TEMP%\playwright-artifacts-*`, and the local `feat/timelapse` branch.
+- Done (28 Sep): removed `tmp/timelapse-proto/` (163 MB), `.playwright-mcp/`,
+  `%TEMP%\playwright-artifacts-*`, and the merged local `feat/timelapse`
+  branch in both repos.
 - Change the exposed/default Pi passwords.
