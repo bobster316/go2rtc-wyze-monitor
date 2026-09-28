@@ -332,8 +332,37 @@ can be deleted, or kept for future design rounds.
   secrets inside. Test-extracted with `unzip` on the Pi 5 in `/tmp`: exit 0,
   no warnings, no backslash names (test files removed afterwards).
 - `*.svg text eol=lf` added to `.gitattributes` in both repos.
-- **Pi 4 (`192.168.1.93`) still not updated:** it was offline on 28 Sep (no
-  ping, SSH timeout).
+- **Pi 4 (`192.168.1.93`) updated** (28 Sep, ~09:38) from `9d20b76` to
+  `5cd47b6`, so it now matches the Pi 5 (timelapse, recordings, new icons).
+  - Pi 4 facts: Pi 4 Model B Rev 1.5, Raspberry Pi OS / Debian 13 Trixie,
+    arm64. The only app is Wyze Monitor (Docker project `wyze-monitor-rpi`,
+    `compose.yaml` + `compose.pi4.yaml`) running from a **git checkout** at
+    `/home/pi/go2rtc-wyze-monitor` (detached HEAD), not `wyze-monitor-rpi`.
+    Ports bind to `192.168.1.93` only, so `curl 127.0.0.1` on the Pi fails;
+    use the LAN IP.
+  - `pi` was added to the `docker` group (user ran `usermod`); sudo still
+    needs a password.
+  - Method: the repo is private, so the update came as a git bundle
+    (`tmp/pi4-update.bundle`, `git fetch` + `checkout --detach`), then the
+    repo's own `raspberry-pi/setup.sh pi4` (regenerated go2rtc config with
+    `rtsp :8554` on the private network, recreated go2rtc and monitor-web).
+    Script: `tmp/deploy-pi4-update.sh`.
+  - Backup: `/home/pi/wyze-monitor-backup-20260928-093804` (`source.tgz`
+    including `.env`, `cameras.yaml` and `runtime/go2rtc.yaml`; `git-head.txt`;
+    container lists) and image `wyze-monitor-rpi-web:backup-20260928-093804`.
+    Rollback: `git checkout --detach 9d20b76`, restore `runtime/go2rtc.yaml`
+    from `source.tgz`, retag the backup image as `wyze-monitor-rpi-web:local`,
+    then `docker compose -f compose.yaml -f compose.pi4.yaml up -d
+    --force-recreate go2rtc monitor-web`.
+  - Verified: health OK (4 cameras, 8 streams, arm64), new favicon served,
+    `/api/timelapse` 200, port 80 200, one frame decoded from each of the four
+    cameras via go2rtc RTSP, no errors in logs, no `.env` / `cameras.yaml` /
+    `runtime/` inside the image.
+  - **Still old:** the Pi 4 desktop launcher icon
+    (`/usr/local/share/icons/hicolor/scalable/apps/wyze-monitor.svg`) needs
+    sudo to replace; the user was given the command.
+  - Left alone: untracked `src/styles.css.before-overlay-fix` on the Pi 4
+    (not ours; it is copied into the image but unused).
 
 ## Next steps
 
