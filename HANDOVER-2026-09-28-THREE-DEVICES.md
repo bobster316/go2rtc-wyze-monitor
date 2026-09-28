@@ -105,6 +105,44 @@ the Windows shortcut (`-Device`, `-Url`).
 Alternative if a separate Pi repo is wanted for the video: generate it from
 the main repo with a script and never edit it by hand.
 
+### Planned iOS and Android apps (user, 28 Sep)
+
+The user plans iOS and Android apps. This strengthens the one-repo case.
+
+- Phones would be **viewers**, not hosts: they connect to go2rtc and the
+  dashboard API on a Pi (or the PC), like the Windows Pi viewers. Phones
+  cannot keep camera capture or timelapse running (iOS background limits).
+  Product = hosts (Pi 4, Pi 5, Windows) + viewers (Windows, browser, iOS,
+  Android).
+- The apps depend on the host API (`/api/config`, `/api/health`,
+  `/api/timelapse`, stream WebSocket). Keeping API and apps in one repo lets
+  one change and its tests cover both. Suggested layout: `server/`, `web/`
+  (shared UI), `windows/` (Electron), `mobile/`.
+- Already in place: iOS and Android icon sets (`assets/icons/apple`,
+  `assets/icons/android`); per-device colours can label hosts in the app.
+
+Decisions to make before building:
+
+1. **App-store name.** Apple and Google reject third-party trademarks in app
+   names or icons without permission. "Wyze Monitor" is risky in the
+   stores; use a neutral name plus "works with Wyze Cam v4" in the
+   description.
+2. **Home-only or remote access.** Today everything is LAN-only with no
+   login. Remote viewing needs secure access (e.g. Tailscale or a relay) and
+   authentication on the dashboard. This is the largest piece of work.
+3. **Technology.** Capacitor wrapper of the existing web UI (fastest, reuses
+   the streaming code; risk of Apple "minimal functionality" rejection);
+   React Native / Expo or Flutter (one codebase, native feel; leaning React
+   Native + Expo, whose cloud build covers iOS); or fully native Swift +
+   Kotlin (two codebases). **iOS builds need a Mac or a cloud build
+   service**; the user is on Windows.
+4. **Windows as a host for phones.** The Windows app listens on
+   `127.0.0.1` only (`src/main.js`), so phones can reach the Pis but not
+   the PC. Opening it to the LAN needs the same security review as the Pis.
+5. Phone details: iOS local-network permission, cleartext `http://` on the
+   LAN (iOS ATS local networking, Android network security config), and
+   host discovery via mDNS (`wyze-monitor.local`) or manual address entry.
+
 A tidy-up worth doing either way: make the Pi 5 a git checkout like the Pi 4,
 with its port changes in `.env` / a local override file instead of patched
 compose files. Both Pis could then be updated the same way.
