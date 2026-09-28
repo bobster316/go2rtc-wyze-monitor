@@ -131,6 +131,11 @@ when a graphical session is available.
 
 Check each camera visually; a successful health response alone is insufficient.
 
+The icon colour shows which device you are looking at: raspberry red for a
+Pi 5, leaf green for a Pi 4 (blue is the Windows app). This applies to the
+launcher and the dashboard's browser tab; `ICON_VARIANT` in `.env` overrides
+the tab colour.
+
 ## Installed components
 
 | Location | Purpose |
@@ -140,7 +145,7 @@ Check each camera visually; a successful health response alone is insufficient.
 | Project/raspberry-pi/runtime/go2rtc.yaml | Generated stream credentials |
 | /usr/local/bin/wyze-monitor | Symlink into your project |
 | /usr/local/share/applications/wyze-monitor.desktop | Menu launcher |
-| /usr/local/share/icons/hicolor/scalable/apps/wyze-monitor.svg | Icon |
+| /usr/local/share/icons/hicolor/scalable/apps/wyze-monitor.svg | Icon: red on a Pi 5, green on a Pi 4 |
 | /usr/local/lib/wyze-monitor/publish-friendly-url.sh | Name publisher |
 | /etc/default/wyze-monitor-url | Publisher name configuration |
 | /etc/systemd/system/wyze-monitor-url.service | Dedicated systemd service |

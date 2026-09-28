@@ -129,6 +129,7 @@ DEFAULT_QUALITY=main
 | `MONITOR_PUBLIC_PORT` | Diagnostic HTTP port; 1024-65535. |
 | `WEBRTC_PUBLIC_PORT` | TCP and UDP media port; 1024-65535; different from diagnostic HTTP. |
 | `DEFAULT_QUALITY` | `main` recommended; `sub` explicitly selects lower resolution. |
+| `ICON_VARIANT` | Optional. Browser-tab icon colour: `pi` (raspberry red) or `pi4` (leaf green). Defaults to `pi4` on the Pi 4 profile and `pi` otherwise, so several Pis on one LAN are easy to tell apart. |
 
 The optional `PI_PROFILE` environment value can select `pi4` or `pi5` for the
 launcher. Normally hardware detection handles this.

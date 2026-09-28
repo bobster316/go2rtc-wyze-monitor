@@ -29,9 +29,10 @@ does not require Windows, Electron, or a pre-existing deployment.
 - [From-scratch setup](docs/FROM-SCRATCH.md) - complete beginner build and suggested YouTube chapter order.
 - [Camera and application configuration](docs/CONFIGURATION.md) - firmware prerequisite, every configuration field, adding cameras, ports and friendly names.
 - [Raspberry Pi installation](raspberry-pi/README.md) - OS preparation, installer wizard, Docker, Desktop and SSH.
-- [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration.
+- [Windows installation](docs/WINDOWS.md) - prerequisites, setup, launch and configuration, plus taskbar shortcuts for opening each Raspberry Pi.
 - [Platform features and recording](docs/PLATFORM-FEATURES.md) - Windows/Pi parity and browser download behaviour.
 - [Timelapse](docs/TIMELAPSE.md) - full-resolution timelapses of any cameras, up to 24 hours.
+- [App icons](docs/ICONS.md) - one colour per device (Pi 5 red, Pi 4 green, Windows blue), platform icon sets and regenerating them.
 - [Operation, backup, recovery and removal](docs/OPERATIONS.md) - recreate your installation and maintain it.
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - camera, browser, network, Docker and installer problems.
 - [Architecture](docs/ARCHITECTURE.md) - stream path, shared code and process ownership.

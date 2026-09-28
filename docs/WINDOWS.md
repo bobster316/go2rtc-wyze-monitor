@@ -74,6 +74,49 @@ There is no Windows installer EXE, Windows service or automatic Windows startup
 registration in this release. Launch using `npm start` from the repository folder.
 FFmpeg must remain available on PATH because Electron uses it for MP4 conversion.
 
+## Open a Raspberry Pi dashboard from Windows
+
+If you also run the monitor on a Raspberry Pi, you can open its dashboard in
+its own window on Windows, with its own icon and taskbar pin. Each device has
+its own colour (see [icons](ICONS.md)):
+
+| Shortcut | Opens | Icon |
+|---|---|---|
+| Wyze Monitor Pi | Raspberry Pi 5, default `http://192.168.1.155:18765` | red |
+| Wyze Monitor Pi 4 | Raspberry Pi 4, default `http://192.168.1.93:18765` | green |
+
+After `npm install`, create the shortcuts (Start menu and Desktop):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-pi-viewer-shortcut.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\install-pi-viewer-shortcut.ps1 -Device pi4
+```
+
+If a Pi uses a different address, add `-Url http://PI_IP:18765` and rerun the
+command whenever the address or the project folder changes. To pin a
+shortcut, open it, then right-click its taskbar icon and choose **Pin to
+taskbar**. Windows 11 does not allow scripts to pin apps.
+
+The viewer windows:
+
+- open the Pi dashboard directly, with no browser;
+- can be open at the same time as each other and the Windows app;
+- focus the existing window when clicked again;
+- save timelapse and MP4 downloads to **Downloads**;
+- show a message with a **Retry** button if the Pi cannot be reached.
+
+To open a viewer without a shortcut:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\start-pi-viewer.ps1 -Device pi4
+```
+
+Each shortcut carries a taskbar ID (`WyzeCameraMonitor.Pi`,
+`WyzeCameraMonitor.Pi4`, and `WyzeCameraMonitor.Windows` for the Windows app)
+so that the running window groups with its pin. Do not change the ID on a
+shortcut that is already pinned: Windows removes the pin. Unpin, change it,
+then pin again.
+
 ## Updating or recreating
 
 Back up `cameras.yaml` privately. Close the app, install the selected release in a
@@ -94,3 +137,8 @@ every dependency is the newest available. See [security](../SECURITY.md).
   confirm the `Downloads\Wyze Monitor` folder is writable.
 - The Pi browser viewer remains available at `http://PI_IP:18765` when remote
   access is required.
+- If a taskbar pin shows an old icon, Windows is using its icon cache. Sign
+  out and back in.
+- If a Pi viewer window opens and closes immediately, `NODE_OPTIONS` is set;
+  the shortcut's launcher script clears it, so start viewers through the
+  shortcut or `scripts\start-pi-viewer.ps1`.
