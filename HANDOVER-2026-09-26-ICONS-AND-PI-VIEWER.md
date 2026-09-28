@@ -371,9 +371,8 @@ can be deleted, or kept for future design rounds.
    handovers once (`—` became `â€”`). It was repaired; edit Markdown with an
    editor or pass `-Encoding UTF8` explicitly.
 3. Done: competitor sheets gitignored; both repos committed and pushed.
-4. Done: Pi 5 redeployed (see "Pi 5 deploy"). The Pi 4 (`192.168.1.93`) was
-   **not** updated. It runs the older deployment; update it the same way if
-   it is still in use.
+4. Done: Pi 5 redeployed (see "Pi 5 deploy"). Pi 4 (`192.168.1.93`) updated on 28 Sep
+   (see "Follow-up (28 Sep)").
 5. Done: installer ZIPs rebuilt. Publishing them as GitHub releases still
    needs the user's go-ahead.
 6. Optional polish:
