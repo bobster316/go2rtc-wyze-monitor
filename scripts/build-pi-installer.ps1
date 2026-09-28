@@ -99,7 +99,23 @@ $archive = if ([IO.Path]::IsPathRooted($Destination)) {
 }
 $archiveDirectory = Split-Path -Parent $archive
 New-Item -ItemType Directory -Path $archiveDirectory -Force | Out-Null
-Compress-Archive -LiteralPath $payloadRoot -DestinationPath $archive -Force
+# Compress-Archive on Windows PowerShell 5.1 writes entry names with backslashes,
+# which Linux extractors treat as part of the file name. Write '/' explicitly.
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+if (Test-Path -LiteralPath $archive) {
+    Remove-Item -LiteralPath $archive -Force
+}
+$zip = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Create)
+try {
+    foreach ($relativePath in $files) {
+        $entryName = 'wyze-monitor-rpi/' + ($relativePath -replace '\\', '/')
+        [IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $zip, (Join-Path $payloadRoot $relativePath), $entryName,
+            [IO.Compression.CompressionLevel]::Optimal) | Out-Null
+    }
+} finally {
+    $zip.Dispose()
+}
 
 $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $archive
 $checksumFile = $archive + '.sha256'

@@ -270,7 +270,10 @@ The Pi viewer shows the **Pi 5** (`192.168.1.155:18765`). The Pi 4
 
 ## Files changed
 
-Windows repo `go2rtc-wyze-monitor` (uncommitted):
+All of the below was committed in `670a5d2` (Windows repo) and `7e365e1`
+(Pi repo) and pushed.
+
+Windows repo `go2rtc-wyze-monitor`:
 
 ```
  M raspberry-pi/server.js            /favicon.svg now serves favicon-pi.svg
@@ -291,7 +294,7 @@ Windows repo `go2rtc-wyze-monitor` (uncommitted):
 ?? HANDOVER-2026-09-26-ICONS-AND-PI-VIEWER.md
 ```
 
-Pi repo `wyze-pi-camera-dashboard` (uncommitted):
+Pi repo `wyze-pi-camera-dashboard`:
 
 ```
  M raspberry-pi/wyze-monitor.svg
@@ -309,8 +312,8 @@ Outside the repos (live on this PC):
 
 `docs/icon-design/icon-research-competitors.png` and
 `icon-concepts-in-market.png` contain **other companies' app icons** (Ring,
-Hikvision, Arlo, Wyze, etc.). Both repos are public on GitHub, so do not
-commit these. Keep them local or add `docs/icon-design/` to `.gitignore`.
+Hikvision, Arlo, Wyze, etc.). They are gitignored and must stay out of git,
+even though the repos are now private, in case they are made public again.
 `icon-concepts.png` (our designs only) is safe.
 
 `scripts/icons/concepts.py` expects the downloaded competitor icons in
@@ -318,13 +321,23 @@ commit these. Keep them local or add `docs/icon-design/` to `.gitignore`.
 scratchpad and are gone. It is a review tool, not needed for production. It
 can be deleted, or kept for future design rounds.
 
+## Follow-up (28 Sep)
+
+- **Taskbar pins confirmed working** by the user (both apps pinned, one
+  button each).
+- **Installer ZIP paths fixed** in both repos' `build-pi-installer.ps1`:
+  `Compress-Archive` (PowerShell 5.1) was replaced with a `ZipArchive` writer
+  that uses `/` in entry names. Both ZIPs rebuilt (Windows repo 58 files,
+  SHA-256 `493F211C…E5789`; Pi repo 50 files, `66C9C255…2948D`), no
+  secrets inside. Test-extracted with `unzip` on the Pi 5 in `/tmp`: exit 0,
+  no warnings, no backslash names (test files removed afterwards).
+- `*.svg text eol=lf` added to `.gitattributes` in both repos.
+- **Pi 4 (`192.168.1.93`) still not updated:** it was offline on 28 Sep (no
+  ping, SSH timeout).
+
 ## Next steps
 
-1. **User:** both apps are open on the taskbar. Right-click the red Pi icon →
-   **Pin to taskbar**, then the blue Windows icon → **Pin to taskbar**, and
-   drag red before blue (requested order: 1 Pi, 2 Windows).
-2. After pinning, close both apps and click each pin to confirm it launches
-   and shows one button each (app ID grouping). Note for editors: Windows
+1. Done: taskbar pins (see follow-up above). Note for editors: Windows
    PowerShell 5.1 `Get-Content -Raw`/`Set-Content` corrupted UTF-8 in these
    handovers once (`—` became `â€”`). It was repaired; edit Markdown with an
    editor or pass `-Encoding UTF8` explicitly.
