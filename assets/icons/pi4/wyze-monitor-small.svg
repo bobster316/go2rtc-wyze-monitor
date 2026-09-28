@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  
+  <defs>
+    <linearGradient id="pg" gradientUnits="userSpaceOnUse" x1="3.00" y1="57.09" x2="214.54" y2="239.78">
+      <stop offset="0" stop-color="#A6D65A"/><stop offset="0.5" stop-color="#75A928"/><stop offset="1" stop-color="#3E6E10"/>
+    </linearGradient>
+    <linearGradient id="ph" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pd" cx="0.4" cy="0.36" r="0.7">
+      <stop offset="0" stop-color="#3A3A3A"/><stop offset="1" stop-color="#0A0A0A"/>
+    </radialGradient>
+    <mask id="pc1" maskUnits="userSpaceOnUse">
+      <rect x="-122" y="-122" width="500" height="500" fill="#fff"/>
+      <rect x="-13.83" y="40.26" width="245.19" height="216.35" rx="57.69" fill="#000"/>
+    </mask>
+    <filter id="ps" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="2.40" stdDeviation="2.16" flood-color="#000000" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="7.21" stdDeviation="7.21" flood-color="#000000" flood-opacity="0.20"/>
+    </filter>
+    <filter id="pl" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="1.80" stdDeviation="2.88" flood-color="#000" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <g filter="url(#ps)">
+    <rect x="41.46" y="16.22" width="211.54" height="182.69" rx="40.87" fill="#FFFFFF" mask="url(#pc1)"/>
+    <rect x="3.00" y="57.09" width="211.54" height="182.69" rx="40.87" fill="url(#pg)"/>
+  </g>
+  <rect x="3.00" y="57.09" width="211.54" height="182.69" rx="40.87" fill="url(#ph)"/>
+  <circle cx="108.77" cy="148.43" r="54.81" fill="#FFFFFF" filter="url(#pl)"/>
+  <circle cx="108.77" cy="148.43" r="33.98" fill="url(#pd)"/>
+</svg>

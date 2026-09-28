@@ -200,7 +200,10 @@ install_launchers() {
   chmod 700 "${script_dir}/wyze-monitor"
   run_root ln -sfn "${script_dir}/wyze-monitor" /usr/local/bin/wyze-monitor
   run_root install -d -m 0755 "$icon_dir" "$application_dir"
-  run_root install -m 0644 "${script_dir}/wyze-monitor.svg" "${icon_dir}/wyze-monitor.svg"
+  local icon_source="${script_dir}/wyze-monitor.svg"
+  # Leaf-green launcher on a Pi 4, matching its dashboard favicon.
+  [[ "$profile" == "pi4" ]] && icon_source="${script_dir}/wyze-monitor-pi4.svg"
+  run_root install -m 0644 "$icon_source" "${icon_dir}/wyze-monitor.svg"
   run_root install -m 0644 "${script_dir}/wyze-monitor.desktop" "${application_dir}/wyze-monitor.desktop"
 
   if command -v xdg-user-dir >/dev/null 2>&1; then

@@ -30,6 +30,8 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
     fs.copyFileSync(path.join(root, file), path.join(fixture, file));
   }
   fs.writeFileSync(path.join(fixture, 'src/renderer.html'), '<!doctype html><title>Dummy test</title>');
+  fs.writeFileSync(path.join(fixture, 'src/favicon-pi.svg'), '<svg id="red"/>');
+  fs.writeFileSync(path.join(fixture, 'src/favicon-pi4.svg'), '<svg id="green"/>');
   const dummyPassword = 'PRIVATE_TEST_VALUE_ONLY';
   fs.writeFileSync(path.join(fixture, 'cameras.yaml'), JSON.stringify({
     cameras: [{ id: 'test', name: 'Test', ip: '192.0.2.10', user: 'PRIVATE_TEST_USER', password: dummyPassword }],
@@ -45,7 +47,7 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
     cwd: fixture,
     env: { ...process.env, NODE_PATH: path.join(root, 'node_modules'), PORT: '0',
       GO2RTC_HOST: '127.0.0.1', GO2RTC_API_PORT: String(upstream.address().port), DEFAULT_QUALITY: 'main',
-      TIMELAPSE_DIR: path.join(fixture, 'timelapses') },
+      TIMELAPSE_DIR: path.join(fixture, 'timelapses'), ICON_VARIANT: 'pi4' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   const port = await new Promise((resolve, reject) => {
@@ -73,6 +75,9 @@ test('Pi HTTP routes expose only public metadata and reflect upstream health', {
   assert.equal(healthResponse.status, 200);
   assert.ok(!healthText.includes(dummyPassword));
   assert.deepEqual(JSON.parse(healthText).streams, ['test_main', 'test_sub']);
+  const icon = await fetch(base + '/favicon.svg');
+  assert.equal(icon.headers.get('content-type'), 'image/svg+xml');
+  assert.equal(await icon.text(), '<svg id="green"/>', 'ICON_VARIANT=pi4 serves the leaf-green favicon');
   upstreamStatus = 503;
   assert.equal((await fetch(base + '/api/health')).status, 503);
   for (const route of ['/cameras.yaml', '/.env', '/api/streams', '/runtime/go2rtc.yaml']) {

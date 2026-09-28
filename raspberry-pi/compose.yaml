@@ -49,6 +49,7 @@ services:
       GO2RTC_API_PORT: 1984
       DEFAULT_QUALITY: ${DEFAULT_QUALITY:-sub}
       TIMELAPSE_DIR: /timelapses
+      ICON_VARIANT: ${ICON_VARIANT:-pi}
     volumes:
       - ../cameras.yaml:/app/cameras.yaml:ro
       - recording-tmp:/recordings

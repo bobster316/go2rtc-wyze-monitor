@@ -9,6 +9,7 @@ Families (same mark, different colourway / container per platform):
   windows  - Windows 11 Fluent blue, unplated with soft shadow (.ico + PNGs)
   pi       - Raspberry Pi red / white / black, same unplated geometry as
              windows so the two taskbar pins match in size (.ico + SVG + PNGs)
+  pi4      - as pi, with a leaf-green front screen to tell a Pi 4 from a Pi 5
   apple    - macOS 1024 icon on the Big Sur grid (.icns) and iOS 1024 full bleed
   android  - adaptive icon layers (108 dp), monochrome themed layer, Play 512
 
@@ -45,6 +46,15 @@ BLUE = {
 }
 RASPBERRY = {
     "pane": ("#F0457A", "#D01E54", "#9E0F3A"),
+    "back": ("#FFFFFF", "#8E8E95"),
+    "rec_ring": "#FFFFFF",
+    "rec_dot": ("#3A3A3A", "#0A0A0A"),
+    "shadow": "#000000",
+}
+# Raspberry Pi 4: leaf green from the Raspberry Pi logo, so a Pi 4 and a Pi 5
+# on the same LAN are told apart at a glance. Otherwise identical to RASPBERRY.
+LEAF = {
+    "pane": ("#A6D65A", "#75A928", "#3E6E10"),
     "back": ("#FFFFFF", "#8E8E95"),
     "rec_ring": "#FFFFFF",
     "rec_dot": ("#3A3A3A", "#0A0A0A"),
@@ -191,10 +201,10 @@ def windows_svg(small):
     return doc(256, 256, mark("w", BLUE, 128, 128 if small else 126, 250 if small else 238, small=small))
 
 
-def pi_svg(small):
+def pi_svg(small, theme=RASPBERRY):
     # Same unplated geometry as Windows so the two pins are the same size on
     # the taskbar (a black plate vanished on dark taskbars and read smaller).
-    return doc(256, 256, mark("p", RASPBERRY, 128, 128 if small else 126, 250 if small else 238, small=small))
+    return doc(256, 256, mark("p", theme, 128, 128 if small else 126, 250 if small else 238, small=small))
 
 
 def macos_svg():
@@ -292,12 +302,13 @@ def main():
         size_set(d, full, small)
         write_ico(d / "wyze-monitor.ico", full, small)
 
-        # Raspberry Pi
-        d = OUT / "pi"
-        full = rasterise(write_svg(d / "wyze-monitor.svg", pi_svg(False)), work)
-        small = rasterise(write_svg(d / "wyze-monitor-small.svg", pi_svg(True)), work)
-        size_set(d, full, small)
-        write_ico(d / "wyze-monitor.ico", full, small)   # Windows shortcut for the Pi viewer
+        # Raspberry Pi: red for the Pi 5 (and default), leaf green for the Pi 4
+        for folder, theme in (("pi", RASPBERRY), ("pi4", LEAF)):
+            d = OUT / folder
+            full = rasterise(write_svg(d / "wyze-monitor.svg", pi_svg(False, theme)), work)
+            small = rasterise(write_svg(d / "wyze-monitor-small.svg", pi_svg(True, theme)), work)
+            size_set(d, full, small)
+            write_ico(d / "wyze-monitor.ico", full, small)   # Windows shortcut for a Pi viewer
 
         # Apple
         d = OUT / "apple"

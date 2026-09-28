@@ -3,3 +3,5 @@ services:
     environment:
       # Preserve the full-resolution source. Smooth 30 runs in the viewing browser.
       DEFAULT_QUALITY: ${DEFAULT_QUALITY:-main}
+      # Leaf-green icon, so a Pi 4 is told apart from a (red) Pi 5.
+      ICON_VARIANT: ${ICON_VARIANT:-pi4}

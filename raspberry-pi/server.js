@@ -34,13 +34,17 @@ const qualities = {
 };
 const requestedQuality = process.env.DEFAULT_QUALITY || config.defaultQuality;
 const defaultQuality = requestedQuality === 'main' ? 'main' : 'sub';
+// Icon colour per device so several Pis on one LAN are told apart:
+// 'pi' = raspberry red (Pi 5, default), 'pi4' = leaf green.
+const favicons = { pi: 'favicon-pi.svg', pi4: 'favicon-pi4.svg' };
+const favicon = favicons[process.env.ICON_VARIANT] || favicons.pi;
 const files = {
   '/': ['renderer.html', 'text/html; charset=utf-8'],
   '/styles.css': ['styles.css', 'text/css; charset=utf-8'],
   '/renderer.js': ['renderer.js', 'application/javascript; charset=utf-8'],
   '/smooth30.js': ['smooth30.js', 'application/javascript; charset=utf-8'],
   '/timelapse-ui.js': ['timelapse-ui.js', 'application/javascript; charset=utf-8'],
-  '/favicon.svg': ['favicon-pi.svg', 'image/svg+xml'],
+  '/favicon.svg': [favicon, 'image/svg+xml'],
   '/vendor/video-rtc.js': ['vendor/video-rtc.js', 'application/javascript; charset=utf-8'],
 };
 
