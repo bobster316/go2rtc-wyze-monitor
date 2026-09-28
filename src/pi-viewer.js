@@ -1,22 +1,32 @@
 ﻿'use strict';
 
-// Opens the Raspberry Pi dashboard in its own window, with the Pi icon and its
+// Opens a Raspberry Pi dashboard in its own window, with that Pi's icon and its
 // own taskbar identity, so it can be pinned beside the Windows monitor.
-//   electron src/pi-viewer.js [--url=http://192.168.1.155:18765]
+//   electron src/pi-viewer.js [--device=pi|pi4] [--url=http://...]
 
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
-const DEFAULT_URL = 'http://192.168.1.155:18765';
-// Must match System.AppUserModel.ID on the "Wyze Monitor Pi" shortcut.
-const APP_USER_MODEL_ID = 'WyzeCameraMonitor.Pi';
+// appId must match System.AppUserModel.ID on the device's shortcut. Never
+// change it for an existing device: Windows drops a pin whose ID changes.
+const DEVICES = {
+  pi: { name: 'Wyze Monitor Pi', appId: 'WyzeCameraMonitor.Pi', icon: 'pi', url: 'http://192.168.1.155:18765' },
+  pi4: { name: 'Wyze Monitor Pi 4', appId: 'WyzeCameraMonitor.Pi4', icon: 'pi4', url: 'http://192.168.1.93:18765' },
+};
 
-const urlArg = process.argv.find((arg) => arg.startsWith('--url='));
-const DASHBOARD_URL = urlArg ? urlArg.slice('--url='.length) : DEFAULT_URL;
+const arg = (name) => {
+  const found = process.argv.find((a) => a.startsWith(`--${name}=`));
+  return found ? found.slice(name.length + 3) : undefined;
+};
+const device = DEVICES[arg('device')] || DEVICES.pi;
+const DASHBOARD_URL = arg('url') || device.url;
 const ORIGIN = new URL(DASHBOARD_URL).origin;
 
-if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
-app.setName('Wyze Monitor Pi');
+if (process.platform === 'win32') app.setAppUserModelId(device.appId);
+app.setName(device.name);
+// Separate profile (and single-instance lock) per extra device, so the Pi 4
+// window can be open at the same time as the Pi 5 one.
+if (device !== DEVICES.pi) app.setPath('userData', path.join(app.getPath('appData'), device.appId));
 
 let mainWindow = null;
 
@@ -36,8 +46,8 @@ if (!app.requestSingleInstanceLock()) {
       minWidth: 1180,
       minHeight: 760,
       backgroundColor: '#070a0e',
-      title: 'Wyze Monitor Pi',
-      icon: path.join(__dirname, '..', 'assets', 'icons', 'pi', 'wyze-monitor.ico'),
+      title: device.name,
+      icon: path.join(__dirname, '..', 'assets', 'icons', device.icon, 'wyze-monitor.ico'),
       autoHideMenuBar: true,
       show: false,
       webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
@@ -68,7 +78,7 @@ if (!app.requestSingleInstanceLock()) {
       const message = `Could not reach the Raspberry Pi dashboard at ${DASHBOARD_URL} (${description}). Check the Pi is powered on and on the network.`;
       mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(
         `<body style="background:#070a0e;color:#e8eef5;font:15px Segoe UI,sans-serif;padding:40px">
-         <h2>Wyze Monitor Pi</h2><p>${message}</p>
+         <h2>${device.name}</h2><p>${message}</p>
          <button onclick="location.href='${DASHBOARD_URL}'" style="font:inherit;padding:8px 16px">Retry</button></body>`,
       )}`);
     });

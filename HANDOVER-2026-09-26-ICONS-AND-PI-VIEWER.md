@@ -384,8 +384,18 @@ side at 16–96 px on dark and light before installing.
 - Pi 4 deployed (HEAD `27ffbe6`, monitor-web only; go2rtc untouched). Backup
   image `wyze-monitor-rpi-web:backup-20260928-142502`. Verified: Pi 4 serves
   the green favicon, Pi 5 still red, both healthy. The Pi 5 needed no deploy.
-- Pi 4 desktop launcher icon: needs the user to run `sudo install` (sudo
-  password).
+- Pi 4 desktop launcher icon: installed by the user with `sudo install`
+  (verified green).
+- **Pi 4 viewer on Windows** (user then asked for it after all): `pi-viewer.js`
+  takes `--device=pi|pi4` (profiles: name, app ID, icon, default URL);
+  `start-pi-viewer.ps1` and `install-pi-viewer-shortcut.ps1` take
+  `-Device`. Created `Wyze Monitor Pi 4.lnk` (Start menu + Desktop), app ID
+  `WyzeCameraMonitor.Pi4`, icon `launchers\Wyze-Monitor-Pi4-<hash>.ico`,
+  URL `http://192.168.1.93:18765`, own `userData` (so its single-instance
+  lock does not collide with the Pi 5 viewer). The Pi 5 and Windows shortcuts
+  were **not** touched (their pins keep their IDs). Verified: the Pi 4 and
+  Pi 5 windows open at the same time; the taskbar shows blue, red and green.
+  User action: right-click the green icon → Pin to taskbar.
 
 ## Next steps
 

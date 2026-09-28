@@ -1,5 +1,8 @@
-﻿param(
-    [string]$Url = 'http://192.168.1.155:18765'
+param(
+    [ValidateSet('pi', 'pi4')]
+    [string]$Device = 'pi',
+    # Empty: use the device's default address from src/pi-viewer.js.
+    [string]$Url = ''
 )
 $ErrorActionPreference = 'Stop'
 $wyzeProject = Split-Path -Parent $PSScriptRoot
@@ -8,4 +11,6 @@ if (-not (Test-Path -LiteralPath $wyzeElectron)) { throw 'Run npm install in the
 # Electron refuses to start with --use-system-ca in NODE_OPTIONS.
 $env:NODE_OPTIONS = $null
 $viewer = Join-Path $wyzeProject 'src\pi-viewer.js'
-Start-Process -FilePath $wyzeElectron -ArgumentList @("`"$viewer`"", "--url=$Url") -WorkingDirectory $wyzeProject
+$viewerArgs = @("`"$viewer`"", "--device=$Device")
+if ($Url) { $viewerArgs += "--url=$Url" }
+Start-Process -FilePath $wyzeElectron -ArgumentList $viewerArgs -WorkingDirectory $wyzeProject
