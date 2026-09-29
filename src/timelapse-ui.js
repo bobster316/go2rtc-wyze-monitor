@@ -14,6 +14,7 @@ const els = {
   durations: $('tlDurations'), lengths: $('tlLengths'), lengthLabel: $('tlLengthLabel'),
   fps: $('tlFps'), deflicker: $('tlDeflicker'), smooth: $('tlSmooth'), labels: $('tlLabels'),
   labelsToggle: $('tlLabelsToggle'), timestamp: $('tlTimestamp'), skipNight: $('tlSkipNight'), tidy: $('tlTidy'),
+  shutter: $('tlShutter'), colour: $('tlColour'), uhd: $('tlUhd'), recommended: $('tlRecommended'),
   name: $('tlName'), summary: $('tlSummary'), start: $('tlStart'), error: $('tlError'),
   activeSection: $('tlActiveSection'), active: $('tlActive'), library: $('tlLibrary'),
   player: $('tlPlayer'), playerVideo: $('tlPlayerVideo'), playerTitle: $('tlPlayerTitle'),
@@ -22,7 +23,9 @@ const els = {
 
 const DURATIONS = [[1800, '30 min'], [3600, '1 h'], [7200, '2 h'], [14400, '4 h'], [28800, '8 h'], [43200, '12 h'], [86400, '24 h']];
 const LENGTHS = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [180, '3 min']];
-const INTERVALS = [[2, '2 s'], [5, '5 s'], [10, '10 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min']];
+// Whole numbers of the cameras' 2-second keyframes, so frames are evenly spaced.
+const INTERVALS = [[2, '2 s'], [4, '4 s'], [6, '6 s'], [10, '10 s'], [16, '16 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min']];
+const TOGGLES = ['shutter', 'deflicker', 'colour', 'smooth', 'labels', 'timestamp', 'skipNight', 'uhd', 'tidy'];
 // Measured daylight average for a Wyze Cam v4 2560x1440 frame at JPEG quality 2.
 const BYTES_PER_FRAME = 900 * 1024;
 const ELECTRON = Boolean(window.electronAPI?.revealTimelapse);
@@ -34,11 +37,23 @@ let pendingDelete = null;
 const selected = new Set();
 const prefs = loadPrefs();
 
+// Recommended look: 25 fps, natural motion blur, steady exposure and colour,
+// daylight only. Bump PREFS_VERSION when these change so saved choices from
+// an older version do not hide the new recommendations.
+const PREFS_VERSION = 2;
+const RECOMMENDED = { fps: 25, shutter: true, deflicker: true, colour: true, smooth: true, labels: true,
+  timestamp: false, skipNight: true, uhd: false, tidy: true };
 function loadPrefs() {
-  const defaults = { layout: 'grid', stopMode: 'after', duration: 86400, length: 60, interval: 10, fps: 30,
-    deflicker: true, smooth: true, labels: true, timestamp: false, skipNight: false, tidy: true };
-  try { return { ...defaults, ...JSON.parse(localStorage.getItem('timelapsePrefs') || '{}') }; }
-  catch { return defaults; }
+  const defaults = { version: PREFS_VERSION, layout: 'grid', stopMode: 'after', duration: 86400, length: 60, interval: 10, ...RECOMMENDED };
+  try {
+    const saved = JSON.parse(localStorage.getItem('timelapsePrefs') || '{}');
+    if (saved.version !== PREFS_VERSION) {
+      // Keep what to capture; reset the look to the recommendations.
+      const { layout, stopMode, duration, length } = saved;
+      return { ...defaults, ...Object.fromEntries(Object.entries({ layout, stopMode, duration, length }).filter(([, v]) => v !== undefined)) };
+    }
+    return { ...defaults, ...saved };
+  } catch { return defaults; }
 }
 function savePrefs() {
   try { localStorage.setItem('timelapsePrefs', JSON.stringify(prefs)); } catch {}
@@ -133,7 +148,7 @@ function renderForm() {
     els.lengthLabel.textContent = 'Finished video length';
     chips(els.lengths, LENGTHS, prefs.length);
   }
-  for (const key of ['deflicker', 'smooth', 'labels', 'timestamp', 'skipNight', 'tidy']) els[key].checked = prefs[key];
+  for (const key of TOGGLES) els[key].checked = prefs[key];
   if (!info.overlays) {
     for (const key of ['labels', 'timestamp']) { els[key].disabled = true; els[key].closest('label').title = 'No overlay font was found on this system.'; }
   }
@@ -159,22 +174,31 @@ function renderSummary() {
   const free = info.disk?.free;
   const tight = free != null && p.bytes > free * 0.9;
   const grid = selected.size > 1 && prefs.layout !== 'individual';
-  const size = grid ? gridSize(selected.size) : '2560×1440';
+  const size = grid ? gridSize(selected.size) : prefs.uhd ? '3840×2160' : '2560×1440';
+  const blur = prefs.shutter ? shutterSec(p.interval) : 0;
   els.summary.innerHTML = [
     `<b>Every ${formatSpan(p.interval)}</b> from ${selected.size === 1 ? esc(cameraName([...selected][0])) : `${selected.size} cameras`} at full 2560×1440`,
     p.manual
       ? `Up to ${p.frames.toLocaleString()} frames · ${formatVideo(p.interval ? 3600 / p.interval / prefs.fps : 0)} of video per hour captured`
       : `${p.frames.toLocaleString()} frames · <b>${formatVideo(p.videoSec)}</b> ${size} video at ${prefs.fps} fps`,
+    blur ? `Natural motion blur: each frame averages ${formatSpan(blur)} of camera footage` : null,
     `<span class="${tight ? 'tl-warn' : ''}">${p.manual ? 'Up to ' : 'About '}${formatBytes(p.bytes)} of frames${free != null ? ` · ${formatBytes(free)} free` : ''}</span>`,
-  ].map(line => `<div>${line}</div>`).join('');
+  ].filter(Boolean).map(line => `<div>${line}</div>`).join('');
   els.start.disabled = false;
   els.start.textContent = later ? 'Schedule timelapse' : 'Start timelapse';
 }
 
+/** Mirrors shutterFrames() in lib/timelapse.js: half the interval, whole keyframes, at most 8. */
+function shutterSec(interval) {
+  const keyframe = info.keyframeSec || 2;
+  const frames = Math.max(1, Math.min(info.maxShutterFrames || 8, Math.round(interval / 2 / keyframe)));
+  return frames > 1 ? frames * keyframe : 0;
+}
+
 function renderOptions() {
   return {
-    layout: prefs.layout, fps: prefs.fps, deflicker: prefs.deflicker, smooth: prefs.smooth,
-    labels: prefs.labels, timestamp: prefs.timestamp, skipNight: prefs.skipNight, tidy: prefs.tidy,
+    layout: prefs.layout, fps: prefs.fps, deflicker: prefs.deflicker, colour: prefs.colour, smooth: prefs.smooth,
+    labels: prefs.labels, timestamp: prefs.timestamp, skipNight: prefs.skipNight, uhd: prefs.uhd, tidy: prefs.tidy,
   };
 }
 
@@ -189,7 +213,7 @@ async function startJob() {
   els.start.disabled = true;
   try {
     await api('', { method: 'POST', body: JSON.stringify({
-      cameras: [...selected], intervalSec: p.interval, durationSec: durationSec(), startAt,
+      cameras: [...selected], intervalSec: p.interval, durationSec: durationSec(), startAt, shutter: prefs.shutter,
       name: els.name.value.trim(), tzOffsetMinutes: -new Date().getTimezoneOffset(), render: renderOptions(),
     }) });
     els.name.value = '';
@@ -488,9 +512,10 @@ function bind() {
     els.startAt.classList.toggle('hidden', v !== 'later');
     if (v === 'later' && !els.startAt.value) els.startAt.value = defaultStart();
   });
-  for (const key of ['deflicker', 'smooth', 'labels', 'timestamp', 'skipNight', 'tidy']) {
-    els[key].addEventListener('change', () => { prefs[key] = els[key].checked; savePrefs(); });
+  for (const key of TOGGLES) {
+    els[key].addEventListener('change', () => { prefs[key] = els[key].checked; savePrefs(); renderSummary(); });
   }
+  els.recommended.addEventListener('click', () => { Object.assign(prefs, RECOMMENDED); savePrefs(); renderForm(); });
   els.startAt.addEventListener('change', renderSummary);
   els.start.addEventListener('click', startJob);
   panel.addEventListener('click', event => {
@@ -534,7 +559,7 @@ async function quickStart(target) {
   target.disabled = true;
   try {
     await api('', { method: 'POST', body: JSON.stringify({
-      cameras: info.cameras.map(camera => camera.id), intervalSec: quickInterval(), durationSec: 3600, name: '',
+      cameras: info.cameras.map(camera => camera.id), intervalSec: quickInterval(), durationSec: 3600, name: '', shutter: prefs.shutter,
       tzOffsetMinutes: -new Date().getTimezoneOffset(), render: { ...renderOptions(), layout: 'grid' },
     }) });
     await refresh(true);
@@ -618,7 +643,7 @@ async function init() {
     return; // Server without timelapse support: keep the button hidden.
   }
   info.cameras.forEach(camera => selected.add(camera.id));
-  if (!info.limits.fps.includes(prefs.fps)) prefs.fps = 30;
+  if (!info.limits.fps.includes(prefs.fps)) prefs.fps = RECOMMENDED.fps;
   button.classList.remove('hidden');
   bind();
   announceReady(info.jobs);

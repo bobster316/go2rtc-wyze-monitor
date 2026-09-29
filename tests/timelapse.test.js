@@ -9,6 +9,7 @@ const { once } = require('node:events');
 const { spawnSync } = require('node:child_process');
 const {
   TimelapseManager, createTimelapseHandler, buildFilterGraph, gridGeometry, concatList, findFont,
+  snapInterval, shutterFrames, colourGains, colourCommands,
 } = require('../lib/timelapse');
 
 const ffmpegAvailable = spawnSync('ffmpeg', ['-version'], { windowsHide: true }).status === 0;
@@ -29,7 +30,8 @@ function probe(file) {
 function manager(root, extra = {}) {
   return new TimelapseManager({
     root, cameras, fontFile: font, canvasWidth: 640, renderPreset: 'veryfast', minFreeBytes: 0,
-    limits: { minIntervalSec: 0.2 }, log: () => {},
+    // lavfi test sources make every frame a keyframe, at 10 fps.
+    limits: { minIntervalSec: 0.2 }, keyframeSec: 0.1, log: () => {},
     // Synthetic cameras: a colour test pattern and a monochrome "night IR" one.
     inputArgs: camera => ['-re', '-f', 'lavfi', '-i',
       `testsrc2=size=320x180:rate=10${camera.id === 'mono' ? ',hue=s=0' : ''}`],
@@ -77,6 +79,48 @@ test('filter graph escapes labels and fonts and composes the grid', () => {
   assert.doesNotMatch(single.graph, /drawtext|xstack|scale/);
 });
 
+test('intervals snap to whole keyframes and the virtual shutter covers half the interval', () => {
+  assert.deepEqual([2, 3, 5, 7, 16, 57.6].map(s => snapInterval(s)), [2, 4, 6, 8, 16, 58]);
+  assert.equal(snapInterval(0.5, 0.1), 0.5);
+  assert.equal(snapInterval(1.5, 2), 1.5, 'below one keyframe the interval is kept');
+  // 2-4 s: one keyframe; 16 s: 4 keyframes = 8 s; long intervals cap at 8.
+  assert.deepEqual([2, 4, 6, 10, 16, 30, 300].map(s => shutterFrames(s)), [1, 1, 2, 3, 4, 8, 8]);
+  assert.equal(shutterFrames(16, 0), 1);
+});
+
+test('colour gains steady the white balance but keep brightness, slow drifts and night frames', () => {
+  const steady = [[120, 100, 80], [120, 100, 80], [150, 100, 60], [120, 100, 80], [120, 100, 80]];
+  const gains = colourGains(steady);
+  assert.deepEqual(gains[0], [1, 1, 1], 'neighbours of the jump are untouched');
+  const [r, g, b] = gains[2];
+  assert.ok(r < 1 && b > 1, `warm jump is cooled: ${gains[2]}`);
+  const luma = ([mr, mg, mb], [kr, kg, kb] = [1, 1, 1]) => 0.2126 * mr * kr + 0.7152 * mg * kg + 0.0722 * mb * kb;
+  assert.ok(Math.abs(luma(steady[2], gains[2]) - luma(steady[2])) < 0.01, 'brightness is unchanged');
+  // A steady colour needs no correction, and dark or ignored frames are left alone.
+  assert.deepEqual(colourGains([[90, 100, 110], [90, 100, 110]]), [[1, 1, 1], [1, 1, 1]]);
+  assert.deepEqual(colourGains([[5, 5, 5], [90, 100, 110], null], new Set([1])), [[1, 1, 1], [1, 1, 1], [1, 1, 1]]);
+  // Corrections are capped.
+  const capped = colourGains([[100, 100, 100], [100, 100, 100], [250, 100, 20], [100, 100, 100], [100, 100, 100]])[2];
+  assert.ok(Math.abs(capped[0] / capped[1] - 0.85) < 1e-3 && Math.abs(capped[2] / capped[1] - 1.18) < 1e-3, String(capped));
+});
+
+test('colour commands fire once per change, half a frame early', () => {
+  const script = colourCommands('colorchannelmixer@c0', [
+    { duration: 2, gains: [1, 1, 1] }, { duration: 2, gains: [1, 1, 1] }, { duration: 4, gains: [0.9, 1, 1.1] },
+  ]);
+  assert.equal(script,
+    '0.000 [enter] colorchannelmixer@c0 rr 1, [enter] colorchannelmixer@c0 gg 1, [enter] colorchannelmixer@c0 bb 1;\n' +
+    '3.000 [enter] colorchannelmixer@c0 rr 0.9, [enter] colorchannelmixer@c0 gg 1, [enter] colorchannelmixer@c0 bb 1.1;\n');
+});
+
+test('filter graph applies colour scripts before deflicker and upscales single videos', () => {
+  const { graph } = buildFilterGraph({
+    inputs: [{ label: 'A', colourScript: "C:\\tl\\it's.cmd" }], grid: false, fps: 25, deflicker: true, upscale: { width: 3840, height: 2160 },
+  });
+  assert.ok(graph.startsWith(String.raw`[0:v]sendcmd=f=C\\:/tl/it\\\'s.cmd,colorchannelmixer@c0=rr=1:gg=1:bb=1,format=yuv420p,deflicker`), graph);
+  assert.match(graph, /scale=3840:2160:flags=lanczos/);
+});
+
 test('concat lists quote paths safely', () => {
   assert.equal(concatList([{ file: "C:\\it's\\1.jpg", duration: 10 }]),
     "ffconcat version 1.0\nfile 'C:/it'\\''s/1.jpg'\nduration 10.000\n");
@@ -100,6 +144,39 @@ test('job validation enforces the 24-hour maximum and camera list', async t => {
   assert.equal(manual.endAt - manual.startAt, 24 * 3600 * 1000);
   assert.equal(manual.render.layout, 'individual');
   assert.equal((await tl.stop(scheduled.id)).state, 'cancelled');
+  // Recommended defaults.
+  assert.deepEqual(
+    (({ fps, deflicker, colour, smooth, skipNight, uhd, timestamp }) => ({ fps, deflicker, colour, smooth, skipNight, uhd, timestamp }))(manual.render),
+    { fps: 25, deflicker: true, colour: true, smooth: true, skipNight: true, uhd: false, timestamp: false });
+});
+
+test('jobs on 2-second keyframe cameras use even intervals and a half-interval shutter', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wyze-tl-shutter-'));
+  const tl = manager(root, { limits: {}, keyframeSec: 2 });
+  await tl.init();
+  t.after(async () => { await tl.close(); fs.rmSync(root, { recursive: true, force: true }); });
+  const later = Date.now() + 3600e3;
+  const odd = await tl.create({ cameras: ['colour'], intervalSec: 5, durationSec: 600, startAt: later });
+  assert.equal(odd.intervalSec, 6);
+  assert.deepEqual(odd.shutter, { frames: 2, windowSec: 4 });
+  const long = await tl.create({ cameras: ['colour'], intervalSec: 16, durationSec: 600, startAt: later });
+  assert.deepEqual(long.shutter, { frames: 4, windowSec: 8 });
+  const off = await tl.create({ cameras: ['colour'], intervalSec: 16, durationSec: 600, startAt: later, shutter: false });
+  assert.deepEqual(off.shutter, { frames: 1, windowSec: 0 });
+  assert.equal(tl.capabilities().defaults.shutter, true);
+});
+
+test('overlapping ticks and saves do not race', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wyze-tl-race-'));
+  const tl = manager(root, { limits: {} });
+  await tl.init();
+  t.after(async () => { await tl.close(); fs.rmSync(root, { recursive: true, force: true }); });
+  const job = await tl.create({ cameras: ['colour'], intervalSec: 10, durationSec: 600, startAt: Date.now() + 3600e3 });
+  const internal = tl.jobs.get(job.id);
+  await Promise.all(Array.from({ length: 20 }, (_, i) => { internal.name = `n${i}`; return tl.save(internal); }));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, job.id, 'job.json'), 'utf8')).name, 'n19');
+  assert.deepEqual(fs.readdirSync(path.join(root, job.id)).filter(f => f.endsWith('.tmp')), []);
+  await Promise.all([tl.tick(), tl.tick(), tl.tick()]);
 });
 
 test('captures aligned frames, renders grid and per-camera H.264, and skips night frames', { skip: !ffmpegAvailable, timeout: 120000 }, async t => {
@@ -110,7 +187,7 @@ test('captures aligned frames, renders grid and per-camera H.264, and skips nigh
 
   const job = await tl.create({
     cameras: ['colour', 'mono'], intervalSec: 0.5, durationSec: 3, tzOffsetMinutes: 60,
-    render: { layout: 'both', fps: 24, timestamp: true, labels: true, tidy: false },
+    render: { layout: 'both', fps: 24, timestamp: true, labels: true, tidy: false, skipNight: false },
   });
   assert.equal(job.state, 'capturing');
   const ready = await waitFor(() => ['ready', 'failed'].includes(tl.get(job.id).state) && tl.get(job.id));

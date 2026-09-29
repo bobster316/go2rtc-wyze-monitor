@@ -28,8 +28,26 @@ you open the setup panel, that camera is preselected.
 4. **Stop**: after a set time (30 minutes to 24 hours), or when you stop it.
    A manual timelapse still ends after 24 hours.
 5. **Finished video length**: the app works out the capture interval. For
-   example, 24 hours made into a 1-minute video at 30 fps captures a frame every
-   48 seconds. For a manual stop you choose the interval instead.
+   example, 24 hours made into a 1-minute video at 25 fps captures a frame every
+   58 seconds. For a manual stop you choose the interval instead.
+
+Intervals are always a whole number of the cameras' 2-second keyframes (2, 4,
+6, 10, 16 s and so on). An odd interval such as 5 s is rounded to 6 s:
+otherwise frames would arrive unevenly and the video would stutter.
+
+### Choosing an interval
+
+| Subject | Interval |
+|---|---|
+| People, street, traffic | 2 s |
+| Sunset, golden hour | 4–6 s |
+| Clouds | 6–10 s |
+| A whole day (24 h into 1 minute) | about 58 s |
+| Garden growth | 5–10 min (daylight only) |
+
+Aim for 10–30 seconds of video per scene. If unsure, pick a shorter interval
+than you think you need. The cameras' lenses are very wide, so things move
+slowly across the frame and slightly longer intervals than usual work well.
 
 The summary under the form shows the interval, frame count, video length and
 estimated disk space. Estimates assume about 900 KB per daylight frame per
@@ -37,15 +55,34 @@ camera.
 
 ### Look and quality
 
+The defaults are the recommended settings; **Use recommended settings** at the
+bottom of the section restores them.
+
 | Option | Default | Effect |
 |---|---|---|
-| Frame rate | 30 fps | 24, 30 or 60 fps output |
+| Frame rate | 25 fps | 24 (film look), 25, 30 or 60 fps output. 60 makes the steps between frames more visible |
+| Natural motion blur | On | Each saved frame averages the camera's keyframes over half the interval (the 180° shutter rule), up to 16 s. Clouds, water and leaves move smoothly, and noise and compression blocks fade. Set when the capture starts |
 | Deflicker | On | Evens out auto-exposure pumping and passing clouds |
-| Motion smoothing | On | Blends each frame with its neighbours (1-2-1) for smoother motion |
+| Steady colour | On | Evens out the camera's automatic white balance jumping between frames, while keeping slow changes such as a sunset |
+| Motion smoothing | On | Blends each frame with its neighbours (1-2-1). Only used when there is no natural motion blur (intervals under 6 s, or blur switched off) |
 | Camera names | On | Labels each grid tile |
 | Date and time | Off | Adds the real capture time, top right, clear of the cameras' own timestamps |
-| Skip night-vision frames | Off | Drops monochrome infrared frames (very low colour saturation) |
+| Skip night-vision frames | On | Drops monochrome infrared frames, so a 24-hour capture becomes a daylight video |
+| 4K for YouTube | Off | Upscales single-camera videos to 3840×2160. YouTube gives 4K uploads a higher-quality stream |
 | Delete frames after the video is made | On | Frees disk space; the timelapse can no longer be re-rendered |
+
+### Getting the best results
+
+The Wyze Cam v4 has automatic exposure and white balance that cannot be
+locked, a fixed wide lens, and a stream of about 1–1.5 Mbit/s. The options
+above make up for most of that in software. On the camera side:
+
+- Mount the camera firmly; wind shake shows as jitter.
+- Keep the lens clean and avoid shooting through window glass.
+- Turn off the motion-triggered spotlight on cameras used for timelapses, or
+  it causes bright flash frames at night.
+- If the Wyze app offers them, turn off the camera's own time and logo
+  watermarks.
 
 ## Grid layouts
 
@@ -53,13 +90,13 @@ Every tile is 16:9, and no layout leaves an empty tile.
 
 | Cameras | Layout | Video size |
 |---|---|---|
-| 1 | Single camera | 2560×1440 (native) |
+| 1 | Single camera | 2560×1440 (native), or 3840×2160 with **4K for YouTube** |
 | 2 | Side by side | 3840×1080 |
 | 3 | One large tile and two small ones stacked | 3840×1440; the large tile is native 2560×1440 |
 | 4 | 2×2 | 3840×2160 |
 | 5–6 | 3×2 | 3840×1440 |
 
-Per-camera videos are always native 2560×1440.
+Per-camera videos are native 2560×1440 unless **4K for YouTube** is on.
 
 ## Where files go
 
@@ -77,9 +114,12 @@ from Downloads. On the Pi, **Delete** removes its frames and videos from the Pi.
 **Capture.** One FFmpeg process per camera reads the camera's main stream from
 go2rtc's RTSP restream and decodes keyframes only (`-skip_frame nokey`). The
 cameras send a keyframe roughly every two seconds, so each camera costs one
-intra-frame decode per keyframe instead of 20 full decodes a second. A select
-filter keeps one keyframe per interval and writes it as a JPEG at quality 2,
-which is visually lossless. Frames are filed by wall-clock slot, so frame N from
+intra-frame decode per keyframe instead of 20 full decodes a second. With
+natural motion blur on, `tmix` averages the last N keyframes (N = half the
+interval in keyframes, at most 8), which the Wyze stream's keyframes suit well:
+they carry almost all of its detail (about 180 KB each, against 2–4 KB for the
+frames between). A select filter keeps one frame per interval and writes it as
+a JPEG at quality 2, which is visually lossless. Frames are filed by wall-clock slot, so frame N from
 every camera shows the same moment, to within one keyframe interval.
 
 A camera that stops sending frames is restarted with back-off. Capture stops if
@@ -89,8 +129,13 @@ in the video.
 
 **Render.** Frames enter FFmpeg through the concat demuxer with their real
 capture spacing as durations, so the optional clock shows true capture time
-even across gaps. The filter graph applies deflicker, scaling and labels per
-camera, `xstack` for the grid, then `tmix` smoothing and the clock. Output is
+even across gaps. With **Steady colour**, a quick first pass measures each
+frame's average colour, and per-frame red, green and blue gains pull its
+red:green and blue:green ratios to the median of the 15 frames around it
+(corrections are capped at about ±17% and keep the frame's brightness).
+`sendcmd` feeds the gains to a `colorchannelmixer`. The filter graph then
+applies deflicker, scaling and labels per camera, `xstack` for the grid, then
+`tmix` smoothing and the clock. Output is
 H.264 High, CRF 18, `yuv420p`, `+faststart`. The bitrate is capped at 80 Mbit/s
 for grid videos and 50 Mbit/s for single cameras, so noisy scenes such as
 foliage or night grain stay a reasonable size. A one-minute 4K grid is about
@@ -112,10 +157,13 @@ with no browser open and resumes after a container or Pi restart.
 ## Limits
 
 - 24 hours maximum per timelapse; interval 2–600 seconds.
-- Even-second intervals line up best with the cameras' keyframes.
+- Intervals are rounded to whole 2-second keyframes.
 - Grid tiles are synchronised to within one keyframe interval, about two seconds.
 - The Wyze Cam v4's switch to infrared at dusk cannot be removed from frames;
-  use **Skip night-vision frames** to drop those frames.
+  **Skip night-vision frames** drops them. A frame counts as night when the
+  median colour saturation of it and its four neighbours is below 4 (measured
+  on real footage: daylight 10–16, dusk 5–9, infrared 0–0.3), so a passing
+  headlight cannot splice a single colour frame into the night.
 
 ## Updating an existing Pi
 

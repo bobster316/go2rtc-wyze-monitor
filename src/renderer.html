@@ -147,17 +147,22 @@
           <div class="tl-field">
             <span class="tl-label">Frame rate</span>
             <div class="tl-seg" id="tlFps" role="group" aria-label="Frame rate">
-              <button type="button" data-value="24">24 fps</button>
+              <button type="button" data-value="24" title="Film look">24 fps</button>
+              <button type="button" data-value="25" title="Recommended in the UK">25 fps</button>
               <button type="button" data-value="30">30 fps</button>
-              <button type="button" data-value="60">60 fps</button>
+              <button type="button" data-value="60" title="Makes the steps between frames more visible">60 fps</button>
             </div>
           </div>
+          <label class="tl-toggle"><input type="checkbox" id="tlShutter" /><span><b>Natural motion blur</b><small>Averages the camera's frames over half of each interval, like a long exposure. Smoother clouds and water, less noise. Set when the capture starts.</small></span></label>
           <label class="tl-toggle"><input type="checkbox" id="tlDeflicker" /><span><b>Deflicker</b><small>Evens out exposure pumping and passing clouds</small></span></label>
-          <label class="tl-toggle"><input type="checkbox" id="tlSmooth" /><span><b>Motion smoothing</b><small>Blends neighbouring frames for silky, cinematic motion</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlColour" /><span><b>Steady colour</b><small>Evens out the camera's white balance jumping between frames</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlSmooth" /><span><b>Motion smoothing</b><small>Blends neighbouring frames when there is no natural motion blur (intervals under 6 s)</small></span></label>
           <label class="tl-toggle" id="tlLabelsToggle"><input type="checkbox" id="tlLabels" /><span><b>Camera names</b><small>Label each tile in the grid video</small></span></label>
           <label class="tl-toggle"><input type="checkbox" id="tlTimestamp" /><span><b>Date and time</b><small>Adds a clock showing the real capture time</small></span></label>
           <label class="tl-toggle"><input type="checkbox" id="tlSkipNight" /><span><b>Skip night-vision frames</b><small>Removes black-and-white infrared frames</small></span></label>
+          <label class="tl-toggle"><input type="checkbox" id="tlUhd" /><span><b>4K for YouTube</b><small>Upscales single-camera videos to 3840×2160 so YouTube streams them at higher quality. Larger files, slower to make.</small></span></label>
           <label class="tl-toggle"><input type="checkbox" id="tlTidy" /><span><b>Delete frames after the video is made</b><small>Frees the disk space. You won't be able to re-render with different settings.</small></span></label>
+          <button type="button" class="tl-link" id="tlRecommended">Use recommended settings</button>
         </details>
         <input type="text" id="tlName" maxlength="60" placeholder="Name (optional)" aria-label="Timelapse name" />
         <div class="tl-summary" id="tlSummary" aria-live="polite"></div>
