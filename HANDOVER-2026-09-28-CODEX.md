@@ -290,6 +290,16 @@ The owner asked to implement the timelapse follow-ups and improvements on
 
 No code has been written for this yet. The investigation results follow.
 
+> **Update 29 Sep 2026 (Claude, commits `0f95122`, `ce47a49`, deployed to Pi 4,
+> Pi 5 and Windows):** done: 9.2 item 1 (tick guard, finish-once, chained
+> saves), 9.4 (night detection validated on the 27 Sep video: day SATAVG
+> 10–16, dusk 5–9, IR 0–0.3; now a median of five frames). New: natural motion
+> blur (keyframe averaging over half the interval), steady colour, 4K-for-YouTube
+> option, recommended defaults (25 fps, skip night), intervals snapped to whole
+> 2 s keyframes (odd intervals used to stutter). See CHANGELOG and
+> docs/TIMELAPSE.md. Still open: 9.2 items 2–3 (clock jumps, gap log), 9.3,
+> 9.5, 9.6.
+
 ### 9.1 Real-world evidence: the owner's own timelapses on the Pi 5
 
 `GET http://192.168.1.155:18765/api/timelapse` lists two jobs the owner ran:
