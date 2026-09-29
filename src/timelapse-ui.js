@@ -26,6 +26,12 @@ const LENGTHS = [[15, '15 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [180
 // Whole numbers of the cameras' 2-second keyframes, so frames are evenly spaced.
 const INTERVALS = [[2, '2 s'], [4, '4 s'], [6, '6 s'], [10, '10 s'], [16, '16 s'], [30, '30 s'], [60, '1 min'], [120, '2 min'], [300, '5 min']];
 const TOGGLES = ['shutter', 'deflicker', 'colour', 'smooth', 'labels', 'timestamp', 'skipNight', 'uhd', 'tidy'];
+// Recommended look: 25 fps, natural motion blur, steady exposure and colour,
+// daylight only. Bump PREFS_VERSION when these change so saved choices from
+// an older version do not hide the new recommendations.
+const PREFS_VERSION = 2;
+const RECOMMENDED = { fps: 25, shutter: true, deflicker: true, colour: true, smooth: true, labels: true,
+  timestamp: false, skipNight: true, uhd: false, tidy: true };
 // Measured daylight average for a Wyze Cam v4 2560x1440 frame at JPEG quality 2.
 const BYTES_PER_FRAME = 900 * 1024;
 const ELECTRON = Boolean(window.electronAPI?.revealTimelapse);
@@ -37,12 +43,6 @@ let pendingDelete = null;
 const selected = new Set();
 const prefs = loadPrefs();
 
-// Recommended look: 25 fps, natural motion blur, steady exposure and colour,
-// daylight only. Bump PREFS_VERSION when these change so saved choices from
-// an older version do not hide the new recommendations.
-const PREFS_VERSION = 2;
-const RECOMMENDED = { fps: 25, shutter: true, deflicker: true, colour: true, smooth: true, labels: true,
-  timestamp: false, skipNight: true, uhd: false, tidy: true };
 function loadPrefs() {
   const defaults = { version: PREFS_VERSION, layout: 'grid', stopMode: 'after', duration: 86400, length: 60, interval: 10, ...RECOMMENDED };
   try {
