@@ -1,6 +1,7 @@
 # Agent notes
 
-Start with [HANDOVER-2026-09-28-CODEX.md](HANDOVER-2026-09-28-CODEX.md): devices,
+Start with [HANDOVER-2026-09-28-CODEX.md](HANDOVER-2026-09-28-CODEX.md), then
+[HANDOVER-2026-09-29-TIMELAPSE-QUALITY.md](HANDOVER-2026-09-29-TIMELAPSE-QUALITY.md) (latest): devices,
 architecture, deploy steps, owner preferences and the work in progress.
 
 - Tests: `$env:NODE_OPTIONS=''; npm test` (clear `NODE_OPTIONS`, or Electron
