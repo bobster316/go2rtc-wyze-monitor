@@ -40,6 +40,8 @@ let info = null;
 let lastJobsJson = '';
 let pollTimer = 0;
 let pendingDelete = null;
+// Jobs whose Stop was pressed; their button shows "Stopping…" until the server confirms.
+const stopping = new Set();
 const selected = new Set();
 const prefs = loadPrefs();
 
@@ -61,6 +63,31 @@ function savePrefs() {
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const cameraName = id => info?.cameras.find(camera => camera.id === id)?.name || id;
+
+// Updates `container` to match `html` while keeping existing elements. The
+// menu and panel refresh every 2 s during a capture; replacing innerHTML
+// swapped the Stop button between press and release, so clicks were lost.
+function patchHtml(container, html) {
+  const next = document.createElement(container.tagName);
+  next.innerHTML = html;
+  patchChildren(container, next);
+}
+function patchChildren(from, to) {
+  const a = [...from.childNodes];
+  const b = [...to.childNodes];
+  b.forEach((node, i) => {
+    const old = a[i];
+    if (!old) from.appendChild(node);
+    else if (old.nodeType !== node.nodeType || old.nodeName !== node.nodeName || old.dataset?.id !== node.dataset?.id) from.replaceChild(node, old);
+    else if (node.nodeType === Node.ELEMENT_NODE) {
+      // src and style are set by script (previews, progress bars), not the markup.
+      for (const { name } of [...old.attributes]) if (!node.hasAttribute(name) && name !== 'src' && name !== 'style') old.removeAttribute(name);
+      for (const { name, value } of [...node.attributes]) if (old.getAttribute(name) !== value) old.setAttribute(name, value);
+      patchChildren(old, node);
+    } else if (old.nodeValue !== node.nodeValue) old.nodeValue = node.nodeValue;
+  });
+  for (let i = a.length - 1; i >= b.length; i--) a[i].remove();
+}
 
 function formatBytes(bytes) {
   if (!bytes) return '0 MB';
@@ -265,8 +292,13 @@ function activeCard(job) {
       <span>${formatBytes(job.bytes)}</span>
     </div>
     ${errors.map(([id, message]) => `<div class="tl-camera-error">${esc(cameraName(id))}: reconnecting (${esc(message)})</div>`).join('')}
-    <div class="tl-actions"><button type="button" class="tl-stop" data-action="stop">Stop &amp; make video</button></div>
+    <div class="tl-actions">${stopButton(job)}</div>
   </article>`;
+}
+
+function stopButton(job) {
+  const busy = stopping.has(job.id);
+  return `<button type="button" class="tl-stop" data-action="stop" title="Stops capturing and makes the video"${busy ? ' disabled' : ''}>${busy ? 'Stopping…' : 'Stop timelapse'}</button>`;
 }
 
 function outputRow(job, output) {
@@ -307,8 +339,8 @@ function renderJobs(jobs) {
   const active = jobs.filter(job => job.state === 'capturing' || job.state === 'scheduled');
   const library = jobs.filter(job => !active.includes(job));
   els.activeSection.classList.toggle('hidden', !active.length);
-  els.active.innerHTML = active.map(activeCard).join('');
-  els.library.innerHTML = library.length ? library.map(libraryCard).join('') : '<p class="tl-empty">Finished timelapses appear here.</p>';
+  patchHtml(els.active, active.map(activeCard).join(''));
+  patchHtml(els.library, library.length ? library.map(libraryCard).join('') : '<p class="tl-empty">Finished timelapses appear here.</p>');
   panel.querySelectorAll('[data-progress]').forEach(bar => { bar.style.width = `${Number(bar.dataset.progress) * 100}%`; });
   loadPreviews();
 }
@@ -354,6 +386,7 @@ async function refresh(force = false) {
     return;
   }
   const jobs = info.jobs;
+  for (const id of stopping) if (!jobs.some(job => job.id === id && job.state === 'capturing')) stopping.delete(id);
   updateToolbar(jobs);
   announceReady(jobs);
   if (!menu.classList.contains('hidden')) renderMenu(jobs);
@@ -458,7 +491,16 @@ async function jobAction(target) {
       pendingDelete = null;
       await api(`/${id}`, { method: 'DELETE' });
     } else if (action === 'stop') {
-      await api(`/${id}/stop`, { method: 'POST', body: '{}' });
+      if (target.classList.contains('tl-stop')) {
+        stopping.add(id);
+        target.disabled = true;
+        target.textContent = 'Stopping…';
+      }
+      try {
+        await api(`/${id}/stop`, { method: 'POST', body: '{}' });
+      } finally {
+        stopping.delete(id);
+      }
     } else if (action === 'render') {
       await api(`/${id}/render`, { method: 'POST', body: JSON.stringify({ render: renderOptions() }) });
     } else if (action === 'prune') {
@@ -590,11 +632,11 @@ function renderMenu(jobs) {
     return `Rendering ${Math.round(job.progress * 100)}%`;
   };
   const cams = job => job.cameras.length === 1 ? esc(cameraName(job.cameras[0])) : `${job.cameras.length} cameras`;
-  menu.innerHTML = `
+  patchHtml(menu, `
     ${running.length ? `<div class="tl-menu-group">${running.map(job => `
       <div class="tl-menu-row" data-id="${job.id}">
         <span><b>${esc(job.name)}</b><small>${cams(job)} · ${status(job)}</small></span>
-        <button type="button" data-action="stop"${job.state === 'capturing' ? ' class="tl-stop"' : ''}>${job.state === 'capturing' ? 'Stop' : 'Cancel'}</button>
+        ${job.state === 'capturing' ? stopButton(job) : '<button type="button" data-action="stop">Cancel</button>'}
       </div>`).join('')}</div>` : ''}
     <div class="tl-menu-group">
       <button type="button" class="tl-menu-item" data-action="quick"><b>Quick start</b><small>All ${info.cameras.length} cameras · 1 hour → 30 s video</small></button>
@@ -607,7 +649,7 @@ function renderMenu(jobs) {
         ${outputButtons(job, output)}
       </div>`;
     }).join('')}</div>` : ''}
-    <div class="tl-menu-group"><button type="button" class="tl-menu-item" data-action="library"><b>All timelapses…</b></button></div>`;
+    <div class="tl-menu-group"><button type="button" class="tl-menu-item" data-action="library"><b>All timelapses…</b></button></div>`);
 }
 
 // ---- ready notice -------------------------------------------------------
