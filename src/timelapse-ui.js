@@ -203,13 +203,37 @@ function renderSummary() {
   const grid = selected.size > 1 && prefs.layout !== 'individual';
   const size = grid ? gridSize(selected.size) : prefs.uhd ? '3840×2160' : '2560×1440';
   const blur = prefs.shutter ? shutterSec(p.interval) : 0;
+  // Every setting shows up here, so each change is visible before starting.
+  const startMs = later ? new Date(els.startAt.value).getTime() : Date.now();
+  const startOk = Number.isFinite(startMs);
+  const when = !startOk ? '<span class="tl-warn">Choose a start time</span>'
+    : `Starts ${later ? formatWhen(startMs) : 'now'} · ${p.manual ? 'runs until you stop it (24 h max)' : `ends ${formatWhen(startMs + durationSec() * 1000)}`}`;
+  const look = [
+    prefs.deflicker && 'deflicker',
+    prefs.colour && 'steady colour',
+    prefs.smooth && !blur && 'motion smoothing',
+    prefs.labels && grid && info.overlays && 'camera names',
+    prefs.timestamp && info.overlays && 'date and time',
+  ].filter(Boolean);
+  const off = [
+    !prefs.shutter && 'motion blur',
+    !prefs.deflicker && 'deflicker',
+    !prefs.colour && 'steady colour',
+  ].filter(Boolean);
+  const target = !p.manual && Math.abs(p.videoSec - prefs.length) > prefs.length * 0.1
+    ? `<span class="tl-warn">${p.interval === info.limits.minIntervalSec ? `The shortest interval is ${formatSpan(p.interval)}, so the video is longer than ${formatVideo(prefs.length)}` : `Can't make exactly ${formatVideo(prefs.length)} from this stop time`}</span>`
+    : null;
   els.summary.innerHTML = [
+    when,
     `<b>Every ${formatSpan(p.interval)}</b> from ${selected.size === 1 ? esc(cameraName([...selected][0])) : `${selected.size} cameras`} at full 2560×1440`,
     p.manual
-      ? `Up to ${p.frames.toLocaleString()} frames · ${formatVideo(p.interval ? 3600 / p.interval / prefs.fps : 0)} of video per hour captured`
+      ? `Up to ${p.frames.toLocaleString()} frames · ${formatVideo(p.interval ? 3600 / p.interval / prefs.fps : 0)} of ${size} video per hour captured, at ${prefs.fps} fps`
       : `${p.frames.toLocaleString()} frames · <b>${formatVideo(p.videoSec)}</b> ${size} video at ${prefs.fps} fps`,
+    target,
     blur ? `Natural motion blur: each frame averages ${formatSpan(blur)} of camera footage` : null,
-    `<span class="${tight ? 'tl-warn' : ''}">${p.manual ? 'Up to ' : 'About '}${formatBytes(p.bytes)} of frames${free != null ? ` · ${formatBytes(free)} free` : ''}</span>`,
+    `Look: ${look.length ? look.join(', ') : 'no processing'}${off.length ? ` · off: ${off.join(', ')}` : ''}`,
+    prefs.skipNight ? 'Night-vision frames removed (the video is shorter if it gets dark)' : 'Night-vision frames kept (black and white after dusk)',
+    `<span class="${tight ? 'tl-warn' : ''}">${p.manual ? 'Up to ' : 'About '}${formatBytes(p.bytes)} of frames${free != null ? ` · ${formatBytes(free)} free` : ''} · ${prefs.tidy ? 'deleted after the video is made' : 'kept for re-rendering'}</span>`,
   ].filter(Boolean).map(line => `<div>${line}</div>`).join('');
   els.start.disabled = false;
   els.start.textContent = later ? 'Schedule timelapse' : 'Start timelapse';
@@ -558,6 +582,7 @@ function bind() {
     els[key].addEventListener('change', () => { prefs[key] = els[key].checked; savePrefs(); renderSummary(); });
   }
   els.recommended.addEventListener('click', () => { Object.assign(prefs, RECOMMENDED); savePrefs(); renderForm(); });
+  els.startAt.addEventListener('input', renderSummary);
   els.startAt.addEventListener('change', renderSummary);
   els.start.addEventListener('click', startJob);
   panel.addEventListener('click', event => {
