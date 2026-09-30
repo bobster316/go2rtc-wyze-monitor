@@ -263,3 +263,17 @@ unchanged). Windows picks them up on next launch. **Not pushed.**
 
 The owner stopped two duplicate 8 h Office captures on the Pi 5 that morning
 (they had been unable to stop them).
+
+Later the same morning:
+
+- The owner had all timelapses deleted on all three devices (3 on the Pi 4,
+  6 on the Pi 5, 1 leftover entry on Windows). Their two files in
+  `Downloads` were left alone.
+- **Summary looked stuck** (`89d033e`, `2617912`). Start time, skip night,
+  deflicker, steady colour, smoothing, clock and tidy were missing from the
+  summary, so changing them seemed to do nothing. It now shows start/end
+  time, a Look line (on and off), night frames kept or removed, and whether
+  frames are kept, and it warns when the 2 s minimum makes the video longer than
+  chosen. "4K for YouTube" is greyed out for grid-only videos (already
+  3840 wide), and "Both" lists grid and single sizes. Deployed to the Pi 4
+  and the Pi 5 (backup `/home/pi/wyze-monitor-backup-20260930-070518`).
