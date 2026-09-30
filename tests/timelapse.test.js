@@ -211,10 +211,18 @@ test('captures aligned frames, renders grid and per-camera H.264, and skips nigh
   const singleOut = ready.outputs.find(o => o.camera === 'colour');
   assert.deepEqual([singleOut.width, singleOut.height], [320, 180]);
 
+  // A power cut can leave empty frames; the render drops them instead of failing.
+  const colourDir = path.join(root, job.id, 'frames', 'colour');
+  const firstFrame = path.join(colourDir, fs.readdirSync(colourDir).sort()[0]);
+  const colourFrames = ready.frames.colour;
+  fs.truncateSync(firstFrame, 0);
+
   // Re-render: the monochrome camera is all "night", so only colour remains.
   await tl.render(job.id, { layout: 'individual', skipNight: true, timestamp: false });
   const rerendered = await waitFor(() => ['ready', 'failed'].includes(tl.get(job.id).state) && tl.get(job.id));
   assert.equal(rerendered.state, 'ready', rerendered.error);
+  assert.equal(fs.existsSync(firstFrame), false, 'empty frame deleted');
+  assert.equal(rerendered.frames.colour, colourFrames - 1);
   assert.deepEqual(rerendered.outputs.map(o => o.camera), ['colour']);
   const files = fs.readdirSync(path.join(root, job.id, 'output'));
   assert.deepEqual(files, [rerendered.outputs[0].name], 'stale outputs removed');
