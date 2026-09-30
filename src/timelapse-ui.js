@@ -330,7 +330,7 @@ function libraryCard(job) {
       ${busy ? '<button type="button" data-action="stop">Cancel render</button>' : ''}
       ${canRender ? `<button type="button" data-action="render" title="Render again with the current Look &amp; quality settings">${job.state === 'ready' ? 'Re-render' : 'Render'}</button>` : ''}
       ${job.state === 'ready' && !job.framesPruned ? `<button type="button" data-action="prune" title="Keep the videos, delete the source frames">Free ${formatBytes(job.bytes)}</button>` : ''}
-      <button type="button" class="tl-danger${confirming ? ' confirm' : ''}" data-action="delete" title="${job.outputsShared ? 'Removes it from this list. Videos in Downloads are kept.' : 'Deletes the frames and videos.'}">${confirming ? (job.outputsShared ? 'Confirm remove' : 'Confirm delete') : (job.outputsShared ? 'Remove' : 'Delete')}</button>
+      <button type="button" class="tl-danger${confirming ? ' confirm' : ''}" data-action="delete" title="Deletes its videos${job.outputsShared ? ' from Downloads' : ''} and frames, and removes it from this list">${confirming ? 'Confirm delete' : 'Delete'}</button>
     </div>
   </article>`;
 }
@@ -484,7 +484,7 @@ async function jobAction(target) {
       if (pendingDelete !== id) {
         pendingDelete = id;
         target.classList.add('confirm');
-        target.textContent = target.textContent === 'Remove' ? 'Confirm remove' : 'Confirm delete';
+        target.textContent = 'Confirm delete';
         setTimeout(() => { if (pendingDelete === id) { pendingDelete = null; refresh(true); } }, 4000);
         return;
       }

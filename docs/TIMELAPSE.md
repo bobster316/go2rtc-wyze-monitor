@@ -106,8 +106,10 @@ Per-camera videos are native 2560×1440 unless **4K for YouTube** is on.
 | Working frames | `%LOCALAPPDATA%\Wyze Monitor\Timelapse frames` | `timelapses` Docker volume |
 | Ready notice | Windows notification (click to show the file) and an in-app banner | In-page banner |
 
-On Windows, **Remove** takes a timelapse off the list but never deletes videos
-from Downloads. On the Pi, **Delete** removes its frames and videos from the Pi.
+**Delete** (press twice to confirm) removes the timelapse from the list and
+deletes its frames and finished videos. On Windows that includes its videos in
+`Downloads\Wyze Monitor\Timelapses`; copy a video somewhere else first to keep
+it. On the Pi, videos already downloaded to another device are not affected.
 
 ## How it works
 

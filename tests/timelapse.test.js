@@ -251,7 +251,9 @@ test('three cameras render the large-plus-two layout; videos go to a shared fold
   assert.equal(rendered.length, 1);
   assert.deepEqual(rendered[0].files, [video]);
   await tl.remove(job.id);
-  assert.ok(fs.existsSync(video), 'videos in the shared folder are kept');
+  assert.equal(fs.existsSync(video), false, 'deleting a timelapse deletes its videos in the shared folder');
+  assert.equal(fs.existsSync(path.join(root, 'frames', job.id)), false, 'job folder deleted');
+  assert.equal(tl.list().some(item => item.id === job.id), false, 'job removed from the list');
 });
 
 test('capture resumes after a restart and keeps wall-clock slots', { skip: !ffmpegAvailable, timeout: 60000 }, async t => {
