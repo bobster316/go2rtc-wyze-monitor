@@ -240,3 +240,26 @@ Ideas raised but not built:
 - Optional stabilisation (`vidstab` is available in all FFmpeg builds checked).
 - "Full motion blur" (decode every frame in the window). Windows and Pi 5
   only; too heavy for the Pi 4.
+
+## 8. Follow-up, 30 September 2026
+
+Three fixes, in both repos (`84ee083`, `0512408`, `c7810a3` main; the same in
+the Pi repo). Deployed to the Pi 4 (git checkout at `c7810a3`, image backup
+`wyze-monitor-rpi-web:backup-20260930-0540`) and the Pi 5 (files copied,
+backup `/home/pi/wyze-monitor-backup-20260930-064308`, other containers
+unchanged). Windows picks them up on next launch. **Not pushed.**
+
+1. **Stop button did nothing.** The menu and panel replaced their HTML every
+   2 s while capturing, so the button changed between press and release and
+   the click was lost. `patchHtml()` in `src/timelapse-ui.js` now updates them
+   in place. The button reads **Stop timelapse** in both places and shows
+   "Stopping…" at once. Checked on the Pi 4 with a 2.6 s press.
+2. **Delete keeps nothing.** On Windows, Delete (was "Remove") left the videos
+   in Downloads. `remove()` now deletes the job's videos in `outputRoot` too.
+3. **Empty frames after a power cut.** The Pi 5 rebooted at 06:14 on 30 Sep;
+   five 0-byte JPEGs made the render fail. Frames are now fsynced before the
+   rename, and `recount()` (run before each render) deletes 0-byte frames.
+   The owner's affected Office job was re-rendered (167 frames).
+
+The owner stopped two duplicate 8 h Office captures on the Pi 5 that morning
+(they had been unable to stop them).
