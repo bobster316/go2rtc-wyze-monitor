@@ -484,6 +484,7 @@ body.tl-open .focus { right: var(--tl-width); }
 .tl-toggle input { width: 15px; height: 15px; margin: 1px 0 0; flex: none; accent-color: var(--tl-select-line); }
 .tl-toggle b { display: block; font-size: 12px; font-weight: 600; color: #dce6f1; }
 .tl-toggle small { display: block; margin-top: 2px; color: #7d8fa0; font-size: 11px; line-height: 1.35; }
+.tl-toggle.tl-disabled { opacity: 0.5; cursor: default; }
 .tl-look .tl-link { margin: 0 12px 12px; padding: 0; border: 0; background: none; color: #8fb4d8; font-size: 11px; cursor: pointer; text-decoration: underline; }
 .tl-look .tl-link:hover { color: #dce6f1; }
 

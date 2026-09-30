@@ -176,6 +176,11 @@ function renderForm() {
     chips(els.lengths, LENGTHS, prefs.length);
   }
   for (const key of TOGGLES) els[key].checked = prefs[key];
+  // A grid-only video is already 3840 wide; 4K only changes single-camera videos.
+  const gridOnly = multi && prefs.layout === 'grid';
+  els.uhd.disabled = gridOnly;
+  els.uhd.closest('label').title = gridOnly ? 'The grid video is already 3840 pixels wide. 4K applies to single-camera videos.' : '';
+  els.uhd.closest('label').classList.toggle('tl-disabled', gridOnly);
   if (!info.overlays) {
     for (const key of ['labels', 'timestamp']) { els[key].disabled = true; els[key].closest('label').title = 'No overlay font was found on this system.'; }
   }
@@ -201,7 +206,8 @@ function renderSummary() {
   const free = info.disk?.free;
   const tight = free != null && p.bytes > free * 0.9;
   const grid = selected.size > 1 && prefs.layout !== 'individual';
-  const size = grid ? gridSize(selected.size) : prefs.uhd ? '3840×2160' : '2560×1440';
+  const single = prefs.uhd ? '3840×2160' : '2560×1440';
+  const size = !grid ? single : prefs.layout === 'both' ? `${gridSize(selected.size)} grid + ${selected.size} × ${single}` : gridSize(selected.size);
   const blur = prefs.shutter ? shutterSec(p.interval) : 0;
   // Every setting shows up here, so each change is visible before starting.
   const startMs = later ? new Date(els.startAt.value).getTime() : Date.now();
@@ -219,6 +225,7 @@ function renderSummary() {
     !prefs.shutter && 'motion blur',
     !prefs.deflicker && 'deflicker',
     !prefs.colour && 'steady colour',
+    !prefs.smooth && 'motion smoothing',
   ].filter(Boolean);
   const target = !p.manual && Math.abs(p.videoSec - prefs.length) > prefs.length * 0.1
     ? `<span class="tl-warn">${p.interval === info.limits.minIntervalSec ? `The shortest interval is ${formatSpan(p.interval)}, so the video is longer than ${formatVideo(prefs.length)}` : `Can't make exactly ${formatVideo(prefs.length)} from this stop time`}</span>`
