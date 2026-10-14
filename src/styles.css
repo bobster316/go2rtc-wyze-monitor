@@ -641,9 +641,10 @@ body.tl-open .focus { right: var(--tl-width); }
 
 /* Grid tiles a little taller than 16:9 (the Pi 4's 4:3 panel): fill the
    stage instead of showing thin black strips above and below. Trims at most
-   10% of the width, all from the left, so the camera's own timestamp (bottom
+   ~16% (full-screen kiosk on the Pi 5) and usually
+   less, all from the left, so the camera's own timestamp (bottom
    right) stays visible. Taller tiles keep the whole picture with bars. */
-@container (aspect-ratio < 16 / 9) and (aspect-ratio >= 8 / 5) {
+@container (aspect-ratio < 16 / 9) and (aspect-ratio >= 3 / 2) {
   .camera-frame > .player { width: 100%; height: 100%; }
   .camera-frame .player video-stream,
   .camera-frame .player video,
