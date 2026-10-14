@@ -90,8 +90,56 @@ Replace both usernames and passwords. The generator rejects `CHANGE_ME`.
 Use spaces for YAML indentation. Quote values containing punctuation; inside
 single quotes, represent a literal apostrophe with two apostrophes.
 Do not percent-encode your password yourself; the URL generator does that.
-Do not put an entire RTSP URL into the `ip` field. Mixed per-camera ports or
-stream paths are not supported by this schema.
+Do not put an entire RTSP URL into the `ip` field. A camera may override
+`port`, `tls` and `streams`. Per-camera stream paths are used exactly as written
+(without an automatically appended slash). With only `streams.main`, Eco reuses
+the main stream rather than opening another connection to the camera.
+
+### Mixed RTSP cameras and printer webcams
+
+Use **Cameras** in the dashboard toolbar to tick the cameras you want to see.
+**Show all** restores the full grid. This selection is saved for that viewer,
+does not remove cameras from the configuration or timelapse chooser, and does
+not disconnect the other visible feeds. New cameras are visible by default.
+With none selected, the dashboard shows an instruction to open Cameras.
+
+Live video, Smooth30 and grid recordings fit the complete source image without
+cropping or stretching. Mixed 16:9 and 4:3 feeds have black bars where necessary.
+The resolution chip says **Mixed** when visible sources have different sizes;
+each tile still displays its own source resolution.
+
+Append entries like these to the existing `cameras` list. Keep credentials in
+the private file only. The interactive wizard still configures v4 cameras;
+use manual configuration for a mixed installation.
+
+```yaml
+  - id: printer
+    name: Ender 3 V2
+    ip: 192.0.2.75
+    user: REPLACE_USER
+    password: CHANGE_ME
+    tls: false
+    port: 554
+    streams:
+      main: live
+  - id: garage
+    name: Ender 3 V2 Garage
+    ip: 192.0.2.214
+    type: mjpeg
+    url: http://192.0.2.214/webcam/?action=stream
+```
+
+RTSP H.264 video remains stream-copied. HTTP(S) MJPEG webcams require H.264
+encoding on each monitoring host that has an active viewer or capture. The
+encoder preserves source dimensions and uses arrival timestamps; it does not
+upscale or force a new frame rate. Main and Eco share one encoder on each host.
+The webcam's existing Crowsnest/Mainsail configuration need not change.
+
+For these single-source cameras, HD and Eco show the same resolution. A camera
+can supply a separate RTSP `streams.sub` path when the firmware supports one.
+For print timelapses, turn off **Skip night-vision frames** if every part of the
+print should be retained; a nearly monochrome print scene may be classified as
+night by the existing colour-based filter.
 
 On the Pi, keep the file private:
 

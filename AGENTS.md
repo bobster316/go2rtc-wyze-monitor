@@ -1,8 +1,13 @@
 # Agent notes
 
+Latest: [HANDOVER-2026-10-04-PRINTER-CAMERAS.md](HANDOVER-2026-10-04-PRINTER-CAMERAS.md)
+adds two printer cameras, mixed RTSP/MJPEG configuration, aspect-ratio fixes
+and saved camera visibility controls, adaptive layouts and information strips
+on Windows and both Pis. It includes the final deployment and verification state.
+
 Start with [HANDOVER-2026-09-28-CODEX.md](HANDOVER-2026-09-28-CODEX.md), then
 [HANDOVER-2026-09-29-TIMELAPSE-QUALITY.md](HANDOVER-2026-09-29-TIMELAPSE-QUALITY.md) and
-[HANDOVER-2026-09-30-STOP-DELETE-SUMMARY.md](HANDOVER-2026-09-30-STOP-DELETE-SUMMARY.md) (latest, with the feature backlog): devices,
+[HANDOVER-2026-09-30-STOP-DELETE-SUMMARY.md](HANDOVER-2026-09-30-STOP-DELETE-SUMMARY.md) (September feature backlog): devices,
 architecture, deploy steps, owner preferences and the work in progress.
 
 - Tests: `$env:NODE_OPTIONS=''; npm test` (clear `NODE_OPTIONS`, or Electron

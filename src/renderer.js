@@ -1,13 +1,22 @@
 import { VideoRTC } from '/vendor/video-rtc.js';
 import { FullResolutionCadence30 } from '/smooth30.js';
 
+// Playback buffer requested from WebRTC. 1000 ms stopped the 20 Sep stutter
+// but added a second of delay; raise it again if stutter returns.
+const PLAYBACK_BUFFER_MS = 300;
+// Reconnect a camera that stays frozen (0 FPS), or whose buffer stays above
+// this, for this many 1 s ticks.
+const MAX_PLAYBACK_DELAY_S = 3;
+const SLOW_TICKS_BEFORE_RECONNECT = 10;
+const AUTO_RECONNECT_COOLDOWN_MS = 60000;
+
 class VideoStream extends VideoRTC {
   async createOffer(pc) {
     const offer = await super.createOffer(pc);
     for (const { receiver } of pc.getTransceivers()) {
       if (receiver.track?.kind !== 'video') continue;
       if ('jitterBufferTarget' in receiver) {
-        receiver.jitterBufferTarget = 1000;
+        receiver.jitterBufferTarget = PLAYBACK_BUFFER_MS;
       } else {
         console.warn('This browser cannot request the Wyze playback buffer.');
       }
@@ -21,7 +30,7 @@ class VideoStream extends VideoRTC {
     this.video.controls = false;
     this.video.muted = true;
     this.video.autoplay = true;
-    this.video.style.objectFit = 'cover';
+    this.video.style.objectFit = 'contain';
     this.video.style.background = '#020304';
   }
 }
@@ -30,6 +39,22 @@ customElements.define('video-stream', VideoStream);
 let config;
 let quality = localStorage.getItem('quality') || 'main';  // overridden by config.defaultQuality on first run
 let focusedCamera = null;
+let hiddenCameraIds = new Set();
+try {
+  const saved = JSON.parse(localStorage.getItem('hiddenCameraIds') || '[]');
+  if (Array.isArray(saved)) hiddenCameraIds = new Set(saved.filter(id => typeof id === 'string'));
+} catch { /* Ignore malformed saved preferences. */ }
+
+function visibleCameras() {
+  return config.cameras.filter(camera => !hiddenCameraIds.has(camera.id));
+}
+
+function setCameraVisible(id, visible) {
+  if (!config.cameras.some(camera => camera.id === id)) return;
+  if (visible) hiddenCameraIds.delete(id); else hiddenCameraIds.add(id);
+  localStorage.setItem('hiddenCameraIds', JSON.stringify([...hiddenCameraIds]));
+  render(true);
+}
 
 const grid = document.getElementById('grid');
 const template = document.getElementById('camera-card-template');
@@ -89,7 +114,10 @@ function makePlayer(container, cameraId, q) {
 }
 
 function newMeter() {
-  return { lastFrames: 0, lastBytes: 0, lastTime: performance.now(), fps: 0, kbps: 0, engine: '--', ready: false };
+  return {
+    lastFrames: 0, lastBytes: 0, lastTime: performance.now(), fps: 0, kbps: 0, engine: '--', ready: false,
+    delay: null, lastJbDelay: null, lastJbEmitted: null, slowTicks: 0,
+  };
 }
 
 async function sampleMeter(el, meter) {
@@ -121,6 +149,16 @@ async function sampleMeter(el, meter) {
           'jitterBufferEmittedCount', 'frameWidth', 'frameHeight', 'framesPerSecond',
         ].filter(key => typeof r[key] === 'number').map(key => [key, r[key]]));
         meter.playback.decoder = r.decoderImplementation || 'unknown';
+        // Average buffer time of frames released since the last sample.
+        const jbDelay = r.jitterBufferDelay;
+        const jbEmitted = r.jitterBufferEmittedCount;
+        if (typeof jbDelay === 'number' && typeof jbEmitted === 'number') {
+          if (meter.lastJbEmitted !== null && jbEmitted > meter.lastJbEmitted) {
+            meter.delay = (jbDelay - meter.lastJbDelay) / (jbEmitted - meter.lastJbEmitted);
+          }
+          meter.lastJbDelay = jbDelay;
+          meter.lastJbEmitted = jbEmitted;
+        }
         meter.playback.bufferTargetMs = el.pc.getReceivers()
           .find(receiver => receiver.track?.kind === 'video')?.jitterBufferTarget ?? null;
       });
@@ -129,12 +167,37 @@ async function sampleMeter(el, meter) {
     } catch (err) { /* stats unavailable this tick */ }
   } else if (el.mseCodecs) {
     meter.engine = 'MSE';
+    const buffered = video.buffered;
+    if (buffered && buffered.length) meter.delay = Math.max(0, buffered.end(buffered.length - 1) - video.currentTime);
+  }
+}
+
+function delayText(meter) {
+  return typeof meter.delay === 'number' ? ` · ${meter.delay.toFixed(1)}s` : '';
+}
+
+/** Reconnect a camera whose picture has frozen or fallen behind. */
+function checkPlaybackDelay(entry) {
+  const m = entry.meter;
+  const frozen = m.ready && m.fps < 0.5;
+  m.slowTicks = frozen || (m.ready && m.delay > MAX_PLAYBACK_DELAY_S) ? m.slowTicks + 1 : 0;
+  if (m.slowTicks < SLOW_TICKS_BEFORE_RECONNECT || recorder) return;
+  if (Date.now() - (entry.lastAutoReconnect || 0) < AUTO_RECONNECT_COOLDOWN_MS) return;
+  console.warn(`${entry.camera.name}: ${frozen ? 'picture frozen' : `playback ${m.delay.toFixed(1)}s behind`}, reconnecting`);
+  if (entry === focusEntry) {
+    openFocus(entry.camera);
+    focusEntry.lastAutoReconnect = Date.now();
+  } else {
+    entry.lastAutoReconnect = Date.now();
+    reconnectCamera(entry.camera.id);
   }
 }
 
 function setStatus(card, text) {
   const s = card.querySelector('.status');
   if (s) s.textContent = text;
+  const state = card.querySelector('.camera-state');
+  if (state) state.textContent = text === 'Connecting' ? 'Connecting' : 'Live';
 }
 
 async function tick() {
@@ -146,11 +209,12 @@ async function tick() {
   let outputFpsSum = 0;
   let kbpsSum = 0;
   let engine = '--';
-  let gridRes = '--';
+  const gridResolutions = new Set();
 
   const activeEntries = focusEntry ? [focusEntry] : [...players.values()];
   for (const entry of activeEntries) {
     await sampleMeter(entry.el, entry.meter);
+    checkPlaybackDelay(entry);
     const m = entry.meter;
     const fpsEl = entry.card?.querySelector('[data-fps]');
     if (m.ready) {
@@ -161,13 +225,14 @@ async function tick() {
       outputFpsSum += outputFps;
       kbpsSum += m.kbps;
       if (m.engine !== '--') engine = m.engine;
-      if (fpsEl) fpsEl.textContent = entry.smoother?.running && entry.smoothStats
+      if (fpsEl) fpsEl.textContent = (entry.smoother?.running && entry.smoothStats
         ? `OUT ${outputFps.toFixed(1)} / SRC ${m.fps.toFixed(1)}`
-        : `SRC ${m.fps.toFixed(1)} FPS`;
+        : `SRC ${m.fps.toFixed(1)} FPS`) + delayText(m);
+      if (fpsEl) fpsEl.title = 'Frame rate · playback buffer delay (time spent waiting in the app before display)';
       const vw = entry.el.video ? entry.el.video.videoWidth : 0;
       const vh = entry.el.video ? entry.el.video.videoHeight : 0;
       if (entry.card) setStatus(entry.card, vw ? `${vw}x${vh}` : config.qualities[quality].label);
-      if (vw) gridRes = `${vw}x${vh}`;
+      if (vw) gridResolutions.add(`${vw}x${vh}`);
       entry.card?.classList.remove('offline');
     } else {
       if (fpsEl) fpsEl.textContent = 'FPS --';
@@ -178,7 +243,7 @@ async function tick() {
 
   if (focusEntry) {
     if (!focusEntry.smoother || !focusEntry.smoother.running) {
-      focusFps.textContent = focusEntry.meter.ready ? `SRC ${focusEntry.meter.fps.toFixed(1)} FPS` : 'FPS --';
+      focusFps.textContent = focusEntry.meter.ready ? `SRC ${focusEntry.meter.fps.toFixed(1)} FPS${delayText(focusEntry.meter)}` : 'FPS --';
     }
   }
 
@@ -187,15 +252,17 @@ async function tick() {
   document.getElementById('fpsText').textContent = live ? (outputFpsSum / live).toFixed(1) : '--';
   document.getElementById('mbpsText').textContent = kbpsSum ? (kbpsSum / 1000).toFixed(2) : '--';
   document.getElementById('engineText').textContent = engine;
-  document.getElementById('resText').textContent = gridRes;
+  const resText = document.getElementById('resText');
+  resText.textContent = gridResolutions.size > 1 ? 'Mixed' : [...gridResolutions][0] || '--';
+  resText.title = [...gridResolutions].join(', ');
 
   const dot = document.getElementById('liveDot');
-  dot.className = 'dot ' + (live === total ? 'ok' : live === 0 ? 'bad' : 'warn');
+  dot.className = 'dot ' + (!total ? 'warn' : live === total ? 'ok' : live === 0 ? 'bad' : 'warn');
   fetch('/api/playback', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(activeEntries.map(entry => ({
       camera: entry.camera.id, ...entry.meter.playback,
-      displayedFps: entry.meter.fps, ready: entry.meter.ready,
+      displayedFps: entry.meter.fps, ready: entry.meter.ready, delay: entry.meter.delay,
     }))),
   }).catch(() => {});
   if (!diagnosticsView.classList.contains('hidden')) updateDiagnostics();
@@ -229,7 +296,7 @@ function renderQualityControls() {
     b.textContent = label;
     b.title = key === 'main'
       ? 'Grid tiles pull the full-resolution stream'
-      : 'Grid tiles pull the low-resolution substream';
+      : 'Grid tiles pull the substream where available; single-stream cameras keep their original resolution';
     b.addEventListener('click', () => {
       quality = key;
       localStorage.setItem('quality', key);
@@ -268,15 +335,14 @@ function bestColumns(count, w, h) {
   let best = { cols: 1, size: 0 };
   for (let cols = 1; cols <= count; cols += 1) {
     const rows = Math.ceil(count / cols);
-    const size = Math.min((w / cols) / TILE_ASPECT, h / rows);
+    const size = Math.min((w / cols) / TILE_ASPECT, Math.max(0, h / rows - 90));
     if (size > best.size) best = { cols, size };
   }
   return best.cols;
 }
 
 function applyGridLayout() {
-  const count = config.cameras.length;
-  if (!count) return;
+  const count = Math.max(1, visibleCameras().length);
   const cols = bestColumns(count, grid.clientWidth || window.innerWidth, grid.clientHeight || window.innerHeight);
   grid.style.setProperty('--cols', cols);
   grid.style.setProperty('--rows', Math.ceil(count / cols));
@@ -293,29 +359,47 @@ function disposePlayer(el) {
   el.ondisconnect();
 }
 
-function render() {
-  renderGeneration += 1;
-  for (const entry of players.values()) { stopSmoother(entry); disposePlayer(entry.el); }
-  players.clear();
-  grid.innerHTML = '';
-  config.cameras.forEach(camera => {
+function render(preservePlayers = false) {
+  if (!preservePlayers) renderGeneration += 1;
+  const cameras = visibleCameras();
+  for (const [id, entry] of players) {
+    if (!preservePlayers || hiddenCameraIds.has(id)) {
+      stopSmoother(entry); disposePlayer(entry.el); entry.card?.remove(); players.delete(id);
+    }
+  }
+  grid.querySelector('.camera-empty')?.remove();
+  if (!preservePlayers) grid.innerHTML = '';
+  cameras.forEach(camera => {
+    if (players.has(camera.id)) return;
     const card = template.content.firstElementChild.cloneNode(true);
     card.dataset.cameraId = camera.id;
     card.querySelector('.camera-label').textContent = camera.name;
-    card.querySelector('strong').textContent = camera.name;
-    card.querySelector('span').textContent = camera.ip;
+    card.querySelector('.camera-label').title = camera.ip;
     card.querySelector('.enlarge').addEventListener('click', () => openFocus(camera));
     card.querySelector('.refresh').addEventListener('click', () => reconnectCamera(camera.id));
     card.querySelector('.camera-frame').addEventListener('dblclick', () => openFocus(camera));
-    grid.appendChild(card);
+    const nextCamera = cameras.slice(cameras.indexOf(camera) + 1).find(item => players.has(item.id));
+    grid.insertBefore(card, nextCamera ? players.get(nextCamera.id).card : null);
 
     const el = makePlayer(card.querySelector('[data-player]'), camera.id, quality);
     const entry = { camera, el, card, meter: newMeter(), smoother: null, smoothStats: null };
     players.set(camera.id, entry);
   });
-  cameraMenu.innerHTML = config.cameras.map(camera => `<div class="camera-menu-item" role="menuitem"><span><b>${camera.name}</b><small>${camera.ip}</small></span><button type="button" data-camera-action="enlarge" data-camera-id="${camera.id}">Enlarge</button><button type="button" data-camera-action="reconnect" data-camera-id="${camera.id}">Reconnect</button></div>`).join('');
+  if (!cameras.length) {
+    const empty = document.createElement('div');
+    empty.className = 'camera-empty';
+    empty.textContent = 'No cameras selected. Open Cameras to choose what to display.';
+    grid.appendChild(empty);
+  }
+  renderCameraMenu();
   applyGridLayout();
   startGridSmoothingAll();
+}
+
+function renderCameraMenu() {
+  const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  cameraMenu.innerHTML = `<div class="camera-menu-heading"><span>Show cameras · ${visibleCameras().length}/${config.cameras.length}</span><button type="button" data-camera-action="show-all">Show all</button></div>` +
+    config.cameras.map(camera => `<div class="camera-menu-item"><label><input type="checkbox" data-camera-visible="${camera.id}" ${hiddenCameraIds.has(camera.id) ? '' : 'checked'}><span><b>${escape(camera.name)}</b><small>${escape(camera.ip)}</small></span></label><button type="button" data-camera-action="enlarge" data-camera-id="${camera.id}">Enlarge</button><button type="button" data-camera-action="reconnect" data-camera-id="${camera.id}" ${hiddenCameraIds.has(camera.id) ? 'disabled' : ''}>Reconnect</button></div>`).join('');
 }
 
 function recordingSource(entry) {
@@ -351,7 +435,10 @@ function drawRecordingFrame() {
     const y = Math.round(item.rect.top * height);
     const w = Math.round(item.rect.width * width);
     const h = Math.round(item.rect.height * height);
-    context.drawImage(source, x, y, w, h);
+    const scale = Math.min(w / source.videoWidth, h / source.videoHeight);
+    const drawW = source.videoWidth * scale;
+    const drawH = source.videoHeight * scale;
+    context.drawImage(source, x + (w - drawW) / 2, y + (h - drawH) / 2, drawW, drawH);
   }
   if (recordingTrack?.requestFrame) recordingTrack.requestFrame();
   recordingTimer = setTimeout(drawRecordingFrame, 33);
@@ -474,10 +561,23 @@ function startRecording() {
 cameraMenu.addEventListener('click', event => {
   const button = event.target.closest('button[data-camera-action]');
   if (!button) return;
+  if (button.dataset.cameraAction === 'show-all') {
+    hiddenCameraIds.clear();
+    localStorage.setItem('hiddenCameraIds', '[]');
+    render(true);
+    return;
+  }
   const camera = config.cameras.find(item => item.id === button.dataset.cameraId);
   if (!camera) return;
   if (button.dataset.cameraAction === 'enlarge') openFocus(camera);
   else reconnectCamera(camera.id);
+});
+cameraMenu.addEventListener('change', event => {
+  const checkbox = event.target.closest('input[data-camera-visible]');
+  if (!checkbox) return;
+  const id = checkbox.dataset.cameraVisible;
+  setCameraVisible(id, checkbox.checked);
+  cameraMenu.querySelector(`input[data-camera-visible="${id}"]`)?.focus();
 });
 cameraMenuButton.addEventListener('click', () => {
   const hidden = cameraMenu.classList.toggle('hidden');

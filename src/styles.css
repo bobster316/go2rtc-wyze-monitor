@@ -92,25 +92,12 @@ button.active { background: #de2d26; color: white; }
   min-height: 0;
   position: relative;
   display: grid;
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: 32px minmax(0, 1fr) 58px;
   background: #0b1117;
   border: 0;
   overflow: hidden;
 }
 
-.camera-card footer {
-  position: absolute;
-  z-index: 4;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  min-height: 30px;
-  display: flex;
-  background: transparent;
-  pointer-events: none;
-}
-
-.camera-card footer { display: none; }
 .camera-menu-wrap { position: relative; }
 .camera-menu {
   position: absolute;
@@ -138,6 +125,13 @@ button.active { background: #de2d26; color: white; }
 .camera-menu-item b { font-size: 11px; }
 .camera-menu-item small { color: #8fa0b1; font-size: 10px; }
 .camera-menu-item button { height: 24px; padding: 0 6px; font-size: 10px; border: 1px solid #344251; border-radius: 4px; }
+.camera-menu-item label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; cursor: pointer; }
+.camera-menu-item input { accent-color: #de2d26; width: 16px; height: 16px; flex: 0 0 auto; }
+.camera-menu-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px; color: #b7c4d0; font-size: 12px; }
+.camera-menu-heading button { font-size: 11px; }
+.camera-menu-item button:disabled { opacity: .4; cursor: default; }
+.camera-menu { max-height: calc(100vh - 65px); overflow-y: auto; max-width: calc(100vw - 20px); }
+.camera-empty { display: grid; place-content: center; padding: 24px; color: #b7c4d0; text-align: center; }
 .diagnostics { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: rgba(0,0,0,.58); }
 .diagnostics.hidden { display: none; }
 .diagnostics-panel { width: min(920px, calc(100vw - 24px)); max-height: min(560px, calc(100vh - 80px)); overflow: hidden; border: 1px solid #344251; border-radius: 9px; background: #101820; box-shadow: 0 14px 45px rgba(0,0,0,.55); }
@@ -180,9 +174,8 @@ button.active { background: #de2d26; color: white; }
   width: 100%;
   height: 100%;
   display: block;
-  /* Fill the grid tile so the small aspect-ratio difference does not leave
-     a distracting black strip between the image and the card footer. */
-  object-fit: cover;
+  /* Keep the entire source frame for mixed 16:9 and 4:3 cameras. */
+  object-fit: contain;
   background: #020304;
 }
 
@@ -237,7 +230,7 @@ button.active { background: #de2d26; color: white; }
 }
 
 .camera-card footer {
-  display: none;
+  display: flex;
   min-height: 32px;
   align-items: center;
   gap: 8px;
@@ -255,6 +248,58 @@ button.active { background: #de2d26; color: white; }
   border-radius: 6px;
   font-size: 12px;
 }
+
+/* Camera chrome sits outside a consistent 16:9 video stage. */
+.camera-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 10px;
+  background: #101820;
+  border-bottom: 1px solid #1f2a35;
+  min-width: 0;
+}
+.camera-heading .camera-label,
+.camera-card footer .status,
+.camera-card footer .metrics {
+  position: static;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  text-shadow: none;
+}
+.camera-heading .camera-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.camera-state { color: #8fe0a8; font-size: 11px; white-space: nowrap; }
+.camera-state::before { content: '\25CF'; margin-right: 5px; font-size: 9px; }
+.camera-card.offline .camera-state { color: #ffd58a; }
+.camera-frame { container-type: size; overflow: hidden; }
+.camera-frame > .player {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 16 / 9));
+  height: min(100cqh, calc(100cqw * 9 / 16));
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.camera-card footer { justify-content: space-between; min-width: 0; }
+.camera-card footer .metrics {
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-items: start;
+  align-items: center;
+  gap: 7px 12px;
+  min-width: 0;
+}
+.camera-card footer .timestamp { grid-column: 1 / -1; color: #8fa0b1; font-weight: 400; }
+.camera-card footer .status { font-size: 11px; }
+.camera-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.camera-card footer button { height: 26px; padding: 0 8px; font-size: 11px; }
 
 .focus {
   position: fixed;
@@ -338,6 +383,7 @@ button.active { background: #de2d26; color: white; }
   width: 100%;
   height: 100%;
   display: block;
+  object-fit: contain;
   background: #020304;
 }
 .player.smooth30-active video-stream { opacity: 0; }
@@ -510,7 +556,7 @@ body.tl-open .focus { right: var(--tl-width); }
 .tl-previews { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin: 10px 0; }
 .tl-previews.tl-n1 { grid-template-columns: 1fr; }
 .tl-previews figure { position: relative; margin: 0; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #020304; }
-.tl-previews img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.tl-previews img { width: 100%; height: 100%; display: block; object-fit: contain; }
 .tl-previews img:not([src]) { visibility: hidden; }
 .tl-previews figcaption { position: absolute; left: 6px; top: 6px; padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.66); font-size: 11px; font-variant-numeric: tabular-nums; }
 .tl-progress { height: 4px; margin: 10px 0 8px; overflow: hidden; border-radius: 2px; background: #1b2631; }

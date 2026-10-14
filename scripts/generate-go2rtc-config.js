@@ -5,8 +5,9 @@
  *
  * go2rtc's own RTSP client cannot complete the TLS handshake with Wyze cameras,
  * so every stream is defined as an `exec:` source that runs FFmpeg directly.
- * FFmpeg only demuxes and remuxes (`-c:v copy`) - it never decodes, so this is
- * cheap. See docs/TROUBLESHOOTING.md for why the other source types fail.
+ * RTSP cameras use stream copy. HTTP MJPEG webcams are encoded to H.264 on
+ * the monitoring host, keeping their source resolution and arrival timing.
+ * See docs/TROUBLESHOOTING.md for why the v4 needs the FFmpeg source.
  *
  * Run standalone:  node scripts/generate-go2rtc-config.js
  * The Electron app also calls this on startup, so config stays in sync.
@@ -50,7 +51,7 @@ function loadConfig() {
 
   const ids = new Set();
   config.cameras.forEach((cam, i) => {
-    for (const field of ['id', 'name', 'ip', 'user', 'password']) {
+    for (const field of (cam.url ? ['id', 'name', 'ip'] : ['id', 'name', 'ip', 'user', 'password'])) {
       if (!cam[field]) throw new Error(`cameras.yaml: camera #${i + 1} is missing "${field}".`);
     }
     if (!/^[a-z0-9_]+$/.test(cam.id)) {
@@ -61,6 +62,7 @@ function loadConfig() {
     if (cam.password === 'CHANGE_ME') {
       throw new Error(`cameras.yaml: camera "${cam.id}" still has the placeholder password.`);
     }
+    validateCamera(cam);
   });
 
   return {
@@ -74,12 +76,32 @@ function loadConfig() {
 }
 
 function cameraUrl(config, cam, streamPath) {
-  const scheme = config.tls ? 'rtsps' : 'rtsp';
+  const scheme = (cam.tls ?? config.tls) ? 'rtsps' : 'rtsp';
   // The password goes into a URL, so percent-encode it. Wyze passwords
   // commonly contain "=" and other characters that must be escaped.
   const user = encodeURIComponent(cam.user);
   const pass = encodeURIComponent(cam.password);
-  return `${scheme}://${user}:${pass}@${cam.ip}:${config.port}/${streamPath}/`;
+  return `${scheme}://${user}:${pass}@${cam.ip}:${cam.port ?? config.port}/${streamPath}${cam.streams ? '' : '/'}`;
+}
+
+function validateCamera(cam) {
+  if (cam.port !== undefined && (!Number.isInteger(cam.port) || cam.port < 1 || cam.port > 65535)) {
+    throw new Error(`Camera "${cam.id}" has an invalid port.`);
+  }
+  if (cam.tls !== undefined && typeof cam.tls !== 'boolean') throw new Error(`Camera "${cam.id}" has invalid tls.`);
+  if (cam.url) {
+    let url;
+    try { url = new URL(cam.url); } catch { throw new Error(`Camera "${cam.id}" has an invalid URL.`); }
+    if (!['http:', 'https:'].includes(url.protocol) || cam.type !== 'mjpeg' || /[\s"'\\<>`|$;&()]/.test(cam.url)) {
+      throw new Error(`Camera "${cam.id}" requires a safe HTTP(S) MJPEG URL and type: mjpeg.`);
+    }
+  } else if (cam.type && cam.type !== 'rtsp') {
+    throw new Error(`Camera "${cam.id}" requires a URL for MJPEG.`);
+  }
+  if (cam.streams && (typeof cam.streams.main !== 'string' || !cam.streams.main ||
+      Object.values(cam.streams).some(value => typeof value !== 'string' || !/^[a-zA-Z0-9_./-]+$/.test(value)))) {
+    throw new Error(`Camera "${cam.id}" has invalid stream paths.`);
+  }
 }
 
 function buildYaml(config, overrides = {}) {
@@ -87,7 +109,19 @@ function buildYaml(config, overrides = {}) {
   const streams = {};
 
   for (const cam of config.cameras) {
-    for (const [quality, streamPath] of Object.entries(config.streams)) {
+    validateCamera(cam);
+    if (cam.url) {
+      // Preserve the webcam's source size and cadence; encode only on demand.
+      streams[`${cam.id}_main`] = `exec:${ffmpeg} -hide_banner -loglevel error -fflags nobuffer -use_wallclock_as_timestamps 1 -i ${cam.url} -an -c:v libx264 -preset ultrafast -tune zerolatency -pix_fmt yuv420p -crf 18 -g 30 -fps_mode vfr -f rtsp {output}`;
+      streams[`${cam.id}_sub`] = `rtsp://127.0.0.1:8554/${cam.id}_main`;
+      continue;
+    }
+    const paths = cam.streams ? { main: cam.streams.main, sub: cam.streams.sub ?? cam.streams.main } : config.streams;
+    for (const [quality, streamPath] of Object.entries(paths)) {
+      if (quality === 'sub' && streamPath === paths.main) {
+        streams[`${cam.id}_sub`] = `rtsp://127.0.0.1:8554/${cam.id}_main`;
+        continue;
+      }
       const url = cameraUrl(config, cam, streamPath);
       streams[`${cam.id}_${quality}`] =
         `exec:${ffmpeg} ${FFMPEG_ARGS} -i ${url} -an -c:v copy -f rtsp {output}`;

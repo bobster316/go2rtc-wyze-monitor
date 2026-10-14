@@ -31,7 +31,7 @@
       <button id="smooth30Toggle" class="action" type="button">Smooth 30 On</button>
       <div class="camera-menu-wrap">
         <button id="cameraMenuButton" class="action" type="button" aria-expanded="false">Cameras</button>
-        <div id="cameraMenu" class="camera-menu hidden" role="menu"></div>
+        <div id="cameraMenu" class="camera-menu hidden" role="group" aria-label="Camera visibility and controls"></div>
       </div>
       <button id="diagnosticsButton" class="action" type="button">Diagnostics</button>
       <button id="recordToggle" class="action record-action" type="button" aria-pressed="false">Record</button>
@@ -48,22 +48,24 @@
   <main class="grid" id="grid"></main>
 
   <template id="camera-card-template">
-    <section class="camera-card">
+    <section class="camera-card offline">
+      <header class="camera-heading">
+        <strong class="camera-label"></strong>
+        <div class="camera-state">Connecting</div>
+      </header>
       <div class="camera-frame">
         <div class="player" data-player></div>
-        <div class="camera-label"></div>
-        <div class="status">Connecting</div>
-        <div class="smooth30-badge tile-smooth30 hidden" data-smooth30-badge>SYNTHETIC 30</div>
+      </div>
+      <footer>
         <div class="metrics">
+          <div class="status">Connecting</div>
           <div class="fps" data-fps>FPS --</div>
           <div class="timestamp"></div>
         </div>
-      </div>
-      <footer>
-        <strong></strong>
-        <span></span>
-        <button class="enlarge" title="Enlarge camera">Enlarge</button>
-        <button class="refresh" title="Reconnect camera">Reconnect</button>
+        <div class="camera-actions">
+          <button class="enlarge" title="Enlarge camera">Enlarge</button>
+          <button class="refresh" title="Reconnect camera">Reconnect</button>
+        </div>
       </footer>
     </section>
   </template>
