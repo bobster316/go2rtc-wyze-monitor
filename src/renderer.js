@@ -30,7 +30,6 @@ class VideoStream extends VideoRTC {
     this.video.controls = false;
     this.video.muted = true;
     this.video.autoplay = true;
-    this.video.style.objectFit = 'contain';
     this.video.style.background = '#020304';
   }
 }

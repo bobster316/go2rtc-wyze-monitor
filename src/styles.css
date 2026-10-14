@@ -638,3 +638,14 @@ body.tl-open .focus { right: var(--tl-width); }
 @media (prefers-reduced-motion: reduce) {
   .timelapse-action.capturing::before, .tl-rec, .tl-progress.live i { animation: none; }
 }
+
+/* Grid tiles a little taller than 16:9 (the Pi 4's 4:3 panel): fill the
+   stage instead of showing thin black strips above and below. Trims at most
+   10% of the width, all from the left, so the camera's own timestamp (bottom
+   right) stays visible. Taller tiles keep the whole picture with bars. */
+@container (aspect-ratio < 16 / 9) and (aspect-ratio >= 8 / 5) {
+  .camera-frame > .player { width: 100%; height: 100%; }
+  .camera-frame .player video-stream,
+  .camera-frame .player video,
+  .camera-frame .smooth30-canvas { object-fit: cover; object-position: right center; }
+}
